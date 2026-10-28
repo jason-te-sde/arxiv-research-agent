@@ -12,9 +12,10 @@ from arxiv_agent.eval.dataset import Evidence
 from arxiv_agent.retrieval.hits import Hit
 
 # Share of the quote that must appear contiguously in the chunk. Below 1.0 so a
-# quote cut by a chunk boundary still counts in the chunk that holds most of it;
-# chunk overlap guarantees one chunk holds at least this much of any quote up to
-# MAX_QUOTE_CHARS long.
+# quote cut by a chunk boundary still counts in the chunk that holds most of it.
+# Chunk overlap does not guarantee such a chunk exists (the splitter carries
+# over only whole pieces shorter than the overlap); `eval check-dataset` does,
+# by refusing a question set in which some quote has no such chunk.
 THRESHOLD = 0.6
 
 # Curly quotes and en/em dashes fold to their ASCII forms.

@@ -23,6 +23,9 @@ by a rule fixed before the runs: take the higher dev two-stage MRR.
   paper still carries that context.
 - One Chroma collection per (embedder, size, overlap): both configurations
   stay side by side and never mix.
+- Overlap applies where the splitter breaks inside a paragraph; between
+  long paragraphs consecutive chunks may share nothing, because only whole
+  pieces shorter than the overlap are carried over.
 
 ## Rejected
 

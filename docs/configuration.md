@@ -6,9 +6,10 @@ Everything is set through environment variables; nothing is read from files.
 | --- | --- | --- |
 | `ARXIV_AGENT_DATA_DIR` | `data` | PDFs (`pdfs/`) and the Chroma index (`chroma/`) |
 | `ARXIV_AGENT_PROVIDER` | `ollama` | `ollama` or `anthropic` |
-| `ARXIV_AGENT_AGENT_MODEL` | `qwen3:8b` / `claude-opus-5-5` | model that runs the agent |
+| `ARXIV_AGENT_AGENT_MODEL` | `qwen3:4b` / `claude-opus-5-5` | model that runs the agent |
 | `ARXIV_AGENT_JUDGE_MODEL` | `llama3.1:8b` / `claude-opus-5-5` | RAGAS judge |
 | `ARXIV_AGENT_OLLAMA_URL` | `http://localhost:11434` | Ollama server |
+| `ARXIV_AGENT_OLLAMA_NUM_CTX` | `16384` | Ollama context window in tokens; reserved up front as KV cache, so it sets memory use |
 | `ARXIV_AGENT_EMBED_MODEL` | `sentence-transformers/all-MiniLM-L6-v2` | embedder |
 | `ARXIV_AGENT_RERANK_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | reranker |
 | `ARXIV_AGENT_CHUNK_SIZE` | `512` | chunk budget in embedder tokens, title and special tokens included |

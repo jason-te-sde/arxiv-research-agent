@@ -58,7 +58,9 @@ class Final(_Event):
     citations: tuple[Citation, ...]
     unverified_citations: tuple[str, ...]
     fallback: bool
-    reason: str | None  # why the run fell back: "budget_exhausted" or "model_error"
+    # Why the run fell back: "budget_exhausted", "empty_answer", "ungrounded_answer"
+    # or "model_error" (a provider refusal included).
+    reason: str | None
     iterations: int
     contexts: tuple[str, ...]  # every passage the run retrieved, in order
     prompt_tokens: tuple[int, ...] = ()  # input tokens of each model call, when reported

@@ -11,11 +11,14 @@ Every question carries verbatim quotes of the passages that answer it. A
 retrieved chunk is relevant when it comes from the quoted paper and its
 longest common substring with a quote covers at least 60% of the quote,
 after folding case, whitespace, curly quotes and ligatures. Quotes are
-40-400 characters; with 64 tokens of overlap a quote that straddles two
-chunks still has 60% in one of them.
+40-400 characters.
 
-`arxiv-agent eval check-dataset` refuses a set in which any quote is
-missing from its paper or from every stored chunk.
+Chunk overlap alone does not guarantee that a quote straddling a boundary
+has 60% in one chunk: the recursive splitter carries over only whole pieces
+shorter than the overlap, so two chunks cut between long paragraphs share
+nothing. What guarantees it is `arxiv-agent eval check-dataset`, which
+refuses a set in which any quote is missing from its paper or has no stored
+chunk that counts as relevant.
 
 ## Consequences
 
