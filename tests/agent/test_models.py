@@ -14,7 +14,7 @@ def test_ollama_agent_model_is_deterministic_and_does_not_think() -> None:
     assert model.reasoning is False
     assert model.temperature == 0
     assert model.seed == 0
-    assert model.num_ctx is not None and model.num_ctx >= 16384
+    assert model.num_ctx == Settings.from_env({}).ollama_num_ctx
 
 
 def test_ollama_judge_uses_the_judge_model() -> None:

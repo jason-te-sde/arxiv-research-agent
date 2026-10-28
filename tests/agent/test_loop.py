@@ -206,3 +206,24 @@ async def test_memory_is_updated_before_the_final_event(store: PaperStore) -> No
         if isinstance(event, Final):
             break  # a client that stops reading at the final event
     assert seen == [Turn("q1", "One.")]
+
+
+async def test_final_reports_the_prompt_size_of_every_call(store: PaperStore) -> None:
+    def used(message: AIMessage, prompt: int) -> AIMessage:
+        message.usage_metadata = {
+            "input_tokens": prompt,
+            "output_tokens": 10,
+            "total_tokens": prompt + 10,
+        }
+        return message
+
+    model = ScriptedChatModel(
+        script=[used(call("search_papers", query="react"), 1800), used(say("Done."), 4200)]
+    )
+    result = final(await run(agent(store, model), "q"))
+    assert result.prompt_tokens == (1800, 4200)
+
+
+async def test_prompt_sizes_are_empty_when_the_model_reports_none(store: PaperStore) -> None:
+    model = ScriptedChatModel(script=[say("Done.")])
+    assert final(await run(agent(store, model), "q")).prompt_tokens == ()

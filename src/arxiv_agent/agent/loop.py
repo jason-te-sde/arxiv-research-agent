@@ -71,6 +71,7 @@ class ResearchAgent:
 
         reason = "budget_exhausted"
         iteration = 0
+        prompt_tokens: list[int] = []
         try:
             while iteration < self._max_iterations:
                 iteration += 1
@@ -80,11 +81,14 @@ class ResearchAgent:
                     if piece.text:
                         yield Token(iteration, piece.text)
                 message = _finish(reply)
+                _count_prompt(reply, prompt_tokens)
                 messages.append(message)
                 calls = [*message.tool_calls, *_invalid_calls(message)]
                 if not calls:
                     if message.text.strip():
-                        final = _final(message.text, ctx, iteration, fallback=False, reason=None)
+                        final = _final(
+                            message.text, ctx, iteration, prompt_tokens, fallback=False, reason=None
+                        )
                         await _remember(memory, question, final.answer)
                         yield final
                         return
@@ -101,7 +105,7 @@ class ResearchAgent:
             log.warning("agent model call failed; falling back to retrieval", exc_info=True)
             reason = "model_error"
 
-        async for event in self._fallback(question, ctx, memory, reason, iteration):
+        async for event in self._fallback(question, ctx, memory, reason, iteration, prompt_tokens):
             yield event
 
     async def _fallback(
@@ -111,6 +115,7 @@ class ResearchAgent:
         memory: ConversationMemory | None,
         reason: str,
         iterations: int,
+        prompt_tokens: list[int],
     ) -> AsyncIterator[AgentEvent]:
         hits = await asyncio.to_thread(self._retriever.search, question)
         ctx.record([h.chunk for h in hits])
@@ -126,6 +131,7 @@ class ResearchAgent:
                     if piece.text:
                         yield Token(iterations + 1, piece.text)
                 answer = _finish(reply).text.strip()
+                _count_prompt(reply, prompt_tokens)
             except Exception:
                 log.warning("fallback answer failed; returning passages", exc_info=True)
                 answer = ""
@@ -134,7 +140,7 @@ class ResearchAgent:
                 "The model could not answer, so these are the most relevant passages:\n\n"
                 + "\n\n".join(f"[{h.chunk.id}] {h.chunk.text}" for h in hits)
             )
-        final = _final(answer, ctx, iterations, fallback=True, reason=reason)
+        final = _final(answer, ctx, iterations, prompt_tokens, fallback=True, reason=reason)
         await _remember(memory, question, final.answer)
         yield final
 
@@ -201,8 +207,20 @@ async def _run_tool(tools: dict[str, BaseTool], call: Any) -> tuple[str, bool]:
         return f"{name} failed: {exc}", False
 
 
+def _count_prompt(reply: AIMessageChunk | None, prompt_tokens: list[int]) -> None:
+    # Ollama and Anthropic both report input tokens; the size decides the context window.
+    if reply is not None and reply.usage_metadata:
+        prompt_tokens.append(reply.usage_metadata["input_tokens"])
+
+
 def _final(
-    answer: str, ctx: ToolContext, iterations: int, *, fallback: bool, reason: str | None
+    answer: str,
+    ctx: ToolContext,
+    iterations: int,
+    prompt_tokens: Sequence[int],
+    *,
+    fallback: bool,
+    reason: str | None,
 ) -> Final:
     citations, unverified = verify_citations(extract_citations(answer), ctx.seen)
     return Final(
@@ -213,6 +231,7 @@ def _final(
         reason=reason,
         iterations=iterations,
         contexts=tuple(ctx.contexts),
+        prompt_tokens=tuple(prompt_tokens),
     )
 
 

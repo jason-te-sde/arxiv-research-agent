@@ -29,6 +29,7 @@ class Settings:
     agent_model: str
     judge_model: str
     ollama_url: str
+    ollama_num_ctx: int = 16384
     max_iterations: int = 3
     k_candidates: int = 20
     k_final: int = 5
@@ -84,6 +85,7 @@ class Settings:
             agent_model=get("AGENT_MODEL", agent_default),
             judge_model=get("JUDGE_MODEL", judge_default),
             ollama_url=get("OLLAMA_URL", "http://localhost:11434"),
+            ollama_num_ctx=get_int("OLLAMA_NUM_CTX", 16384),
             max_iterations=get_int("MAX_ITERATIONS", 3),
             k_candidates=get_int("K_CANDIDATES", 20),
             k_final=get_int("K_FINAL", 5),

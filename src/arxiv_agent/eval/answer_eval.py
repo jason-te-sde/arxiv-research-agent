@@ -29,6 +29,7 @@ class AnswerRecord:
     reason: str | None
     iterations: int
     latency_s: float
+    prompt_tokens: tuple[int, ...] = ()  # input tokens of each model call
 
     def to_json(self) -> str:
         return json.dumps(asdict(self))
@@ -36,8 +37,8 @@ class AnswerRecord:
     @classmethod
     def from_json(cls, line: str) -> AnswerRecord:
         row = json.loads(line)
-        for key in ("contexts", "citations", "unverified_citations", "tools"):
-            row[key] = tuple(row[key])
+        for key in ("contexts", "citations", "unverified_citations", "tools", "prompt_tokens"):
+            row[key] = tuple(row.get(key, ()))
         return cls(**row)
 
 
@@ -81,6 +82,7 @@ async def generate_answers(
             reason=final.reason,
             iterations=final.iterations,
             latency_s=round(time.perf_counter() - started, 3),
+            prompt_tokens=final.prompt_tokens,
         )
         with out.open("a", encoding="utf-8") as f:
             f.write(record.to_json() + "\n")
@@ -104,4 +106,5 @@ def operational_stats(records: Sequence[AnswerRecord]) -> dict[str, Any]:
         "latency_p95_s": round(p95, 2),
         "cited_rate": round(sum(1 for r in records if r.citations) / n, 4),
         "unverified_citations": sum(len(r.unverified_citations) for r in records),
+        "max_prompt_tokens": max((t for r in records for t in r.prompt_tokens), default=0),
     }

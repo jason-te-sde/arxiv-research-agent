@@ -61,6 +61,7 @@ class Final(_Event):
     reason: str | None  # why the run fell back: "budget_exhausted" or "model_error"
     iterations: int
     contexts: tuple[str, ...]  # every passage the run retrieved, in order
+    prompt_tokens: tuple[int, ...] = ()  # input tokens of each model call, when reported
 
 
 AgentEvent = ToolStarted | ToolFinished | Token | Final

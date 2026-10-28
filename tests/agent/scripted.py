@@ -63,7 +63,7 @@ class ScriptedChatModel(BaseChatModel):
     ) -> Iterator[ChatGenerationChunk]:
         message = self._next(messages)
         text = message.content if isinstance(message.content, str) else ""
-        if not text and not message.tool_calls and not message.response_metadata:
+        if not (text or message.tool_calls or message.response_metadata or message.usage_metadata):
             # Real providers always send at least one chunk, even for an empty reply.
             yield ChatGenerationChunk(message=AIMessageChunk(content=""))
         for start in range(0, len(text), 4):
@@ -80,9 +80,13 @@ class ScriptedChatModel(BaseChatModel):
                     ],
                 )
             )
-        if message.response_metadata:
+        if message.response_metadata or message.usage_metadata:
             yield ChatGenerationChunk(
-                message=AIMessageChunk(content="", response_metadata=message.response_metadata)
+                message=AIMessageChunk(
+                    content="",
+                    response_metadata=message.response_metadata,
+                    usage_metadata=message.usage_metadata,
+                )
             )
 
     def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> ScriptedChatModel:

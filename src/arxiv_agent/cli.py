@@ -175,7 +175,7 @@ def _answers(
     args: argparse.Namespace, settings: Settings, dataset: Path, items: Sequence[EvalItem]
 ) -> int:  # pragma: no cover - runs the real agent
     from arxiv_agent.eval.commands import cmd_eval_answers
-    from arxiv_agent.eval.runs import new_run_dir, ollama_digests, run_meta
+    from arxiv_agent.eval.runs import new_run_dir, ollama_digests, ollama_unload, run_meta
     from arxiv_agent.runtime import Runtime
 
     run_dir = args.resume or new_run_dir(_RUNS, f"answers-{args.question_set}")
@@ -187,7 +187,12 @@ def _answers(
     if settings.provider == "ollama":
         meta["ollama_digests"] = ollama_digests(settings.ollama_url, [settings.agent_model])
     agent = Runtime.from_settings(settings, allow_fetch=False).agent
-    cmd_eval_answers(agent, items, run_dir, meta, sys.stdout)
+    meta["ollama_num_ctx"] = settings.ollama_num_ctx
+    try:
+        cmd_eval_answers(agent, items, run_dir, meta, sys.stdout)
+    finally:
+        if settings.provider == "ollama":
+            ollama_unload(settings.ollama_url, settings.agent_model)
     print(f"wrote {run_dir / 'answers.jsonl'}")
     return 0
 
@@ -199,7 +204,7 @@ def _judge(run_dir: Path, settings: Settings) -> int:  # pragma: no cover - runs
     from arxiv_agent.eval import ragas_eval
     from arxiv_agent.eval.commands import cmd_eval_judge
     from arxiv_agent.eval.dataset import load_items
-    from arxiv_agent.eval.runs import ollama_digests
+    from arxiv_agent.eval.runs import ollama_digests, ollama_unload
     from arxiv_agent.retrieval.embeddings import make_embeddings
 
     meta = json.loads((run_dir / "meta.json").read_text())
@@ -209,11 +214,17 @@ def _judge(run_dir: Path, settings: Settings) -> int:  # pragma: no cover - runs
     judge_meta: dict[str, object] = {"judge_model": settings.judge_model}
     if settings.provider == "ollama":
         judge_meta["judge_digest"] = ollama_digests(settings.ollama_url, [settings.judge_model])
+        # Only one 8B model resident at a time on a 16 GB machine.
+        ollama_unload(settings.ollama_url, settings.agent_model)
 
     def judge(records: Sequence[Any], by_id: Mapping[str, Any]) -> list[Any]:
         return ragas_eval.judge(records, by_id, llm, embeddings)
 
-    cmd_eval_judge(run_dir, items, judge, judge_meta, sys.stdout)
+    try:
+        cmd_eval_judge(run_dir, items, judge, judge_meta, sys.stdout)
+    finally:
+        if settings.provider == "ollama":
+            ollama_unload(settings.ollama_url, settings.judge_model)
     print(f"wrote {run_dir / 'summary.json'}")
     return 0
 

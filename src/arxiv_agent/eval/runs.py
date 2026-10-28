@@ -74,6 +74,23 @@ def ollama_digests(
     return {name: installed.get(name, "not installed") for name in names}
 
 
+def ollama_unload(base_url: str, model: str, http: httpx.Client | None = None) -> bool:
+    """Free a model's memory now instead of after Ollama's keep-alive.
+
+    The agent and the judge are each about 8 GB with their context windows;
+    on a 16 GB machine they must not be resident together.
+    """
+    client = http or httpx.Client(timeout=30.0)
+    try:
+        response = client.post(
+            f"{base_url.rstrip('/')}/api/generate", json={"model": model, "keep_alive": 0}
+        )
+        response.raise_for_status()
+    except httpx.HTTPError:
+        return False
+    return True
+
+
 def build_summary(
     meta: Mapping[str, Any], records: Sequence[AnswerRecord], scores: Sequence[ScoreRecord]
 ) -> dict[str, Any]:

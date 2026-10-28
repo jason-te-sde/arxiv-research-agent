@@ -58,3 +58,7 @@ def test_rejects_non_integer() -> None:
 def test_rejects_final_k_above_candidates() -> None:
     with pytest.raises(ValueError, match="k_final"):
         Settings.from_env({"ARXIV_AGENT_K_FINAL": "30"})
+
+
+def test_ollama_context_window_is_configurable() -> None:
+    assert Settings.from_env({"ARXIV_AGENT_OLLAMA_NUM_CTX": "8192"}).ollama_num_ctx == 8192

@@ -12,9 +12,6 @@ from arxiv_agent.config import Settings
 
 Role = Literal["agent", "judge"]
 
-# Three tool rounds of five ~256-token passages, the paper catalog and the
-# conversation fit comfortably; Ollama's own default window is far smaller.
-_OLLAMA_CONTEXT = 16384
 _ANTHROPIC_MAX_TOKENS = 16000
 # On a safety decline the API reruns the request on a fallback model it picks.
 _ANTHROPIC_FALLBACK_BETA = "server-side-fallback-2026-07-01"
@@ -31,7 +28,8 @@ def make_chat_model(settings: Settings, role: Role) -> BaseChatModel:
             reasoning=False,
             temperature=0,
             seed=0,
-            num_ctx=_OLLAMA_CONTEXT,
+            # Reserved up front as KV cache, so it is sized from measured prompts.
+            num_ctx=settings.ollama_num_ctx,
         )
     # No temperature, top_p or top_k: current Claude models reject them with a 400.
     return ChatAnthropic(  # type: ignore[call-arg]

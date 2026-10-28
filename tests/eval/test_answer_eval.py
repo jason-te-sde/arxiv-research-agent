@@ -121,3 +121,23 @@ def test_operational_stats() -> None:
     assert stats["latency_p50_s"] == 25.0
     assert stats["cited_rate"] == 0.75
     assert stats["unverified_citations"] == 1
+
+
+def test_records_written_before_prompt_sizes_existed_still_load() -> None:
+    old = (
+        '{"id": "t01", "question": "q", "answer": "a", "contexts": [], "citations": [], '
+        '"unverified_citations": [], "tools": [], "fallback": false, "reason": null, '
+        '"iterations": 1, "latency_s": 1.0}'
+    )
+    assert AnswerRecord.from_json(old).prompt_tokens == ()
+
+
+def test_stats_report_the_largest_prompt() -> None:
+    from arxiv_agent.eval.answer_eval import operational_stats
+
+    base = AnswerRecord("t", "q", "a", (), (), (), (), False, None, 2, 1.0)
+    records = [
+        AnswerRecord(**{**base.__dict__, "prompt_tokens": (1800, 4200)}),
+        AnswerRecord(**{**base.__dict__, "prompt_tokens": (2100, 6100)}),
+    ]
+    assert operational_stats(records)["max_prompt_tokens"] == 6100

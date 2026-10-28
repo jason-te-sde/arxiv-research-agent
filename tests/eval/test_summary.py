@@ -1,3 +1,5 @@
+import json
+
 import httpx
 
 from arxiv_agent.eval.answer_eval import AnswerRecord
@@ -59,3 +61,25 @@ def test_ollama_digests_come_from_the_tags_endpoint() -> None:
 def test_ollama_digests_survive_a_server_that_is_down() -> None:
     http = httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(503)))
     assert ollama_digests("http://x", ["qwen3:8b"], http) == {"qwen3:8b": "unavailable"}
+
+
+def test_unload_asks_ollama_to_drop_the_model_now() -> None:
+    from arxiv_agent.eval.runs import ollama_unload
+
+    seen: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/generate"
+        seen.append(json.loads(request.content))
+        return httpx.Response(200, json={"done": True})
+
+    http = httpx.Client(transport=httpx.MockTransport(handler))
+    assert ollama_unload("http://localhost:11434", "qwen3:8b", http)
+    assert seen == [{"model": "qwen3:8b", "keep_alive": 0}]
+
+
+def test_unload_of_an_unreachable_server_is_not_an_error() -> None:
+    from arxiv_agent.eval.runs import ollama_unload
+
+    http = httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(500)))
+    assert not ollama_unload("http://x", "qwen3:8b", http)
