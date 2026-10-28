@@ -163,3 +163,24 @@ def test_normalize_arxiv_id(raw: str, expected: str) -> None:
 def test_normalize_rejects_what_is_not_a_new_style_id(raw: str) -> None:
     with pytest.raises(ValueError, match="arXiv"):
         normalize_arxiv_id(raw)
+
+
+def test_concurrent_requests_are_still_spaced(tmp_path: Path) -> None:
+    import threading
+    import time
+
+    starts: list[float] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        starts.append(time.monotonic())
+        time.sleep(0.05)  # a request in flight
+        return httpx.Response(200, content=FIXTURE)
+
+    client = ArxivClient(httpx.Client(transport=httpx.MockTransport(handler)), min_interval=0.3)
+    threads = [threading.Thread(target=client.get, args=(["2210.03629v3"],)) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(starts) == 2
+    assert abs(starts[1] - starts[0]) >= 0.3

@@ -1,12 +1,15 @@
 """A small client for the arXiv export API and PDF downloads.
 
-arXiv asks API users to wait three seconds between requests; every request
-this client makes (metadata and PDFs alike) goes through one throttle.
+arXiv asks API users to wait three seconds between requests and to keep one
+connection at a time. Every request this client makes, metadata and PDFs
+alike, holds one lock across the wait and the request itself, so concurrent
+callers (the API's threadpool, the agent's fetch tool) queue behind it.
 """
 
 from __future__ import annotations
 
 import re
+import threading
 import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -71,6 +74,7 @@ class ArxivClient:
         self._sleep = sleep
         self._api_url = api_url
         self._last: float | None = None
+        self._lock = threading.Lock()
 
     def get(self, ids: Sequence[str]) -> list[PaperMeta]:
         wanted = [normalize_arxiv_id(i) for i in ids]
@@ -120,18 +124,19 @@ class ArxivClient:
         return [_parse_entry(e) for e in root.findall("a:entry", _ATOM) if _is_paper(e)]
 
     def _request(self, url: str, params: dict[str, str] | None) -> httpx.Response:
-        if self._last is not None:
-            wait = self._min_interval - (self._clock() - self._last)
-            if wait > 0:
-                self._sleep(wait)
-        try:
-            response = self._http.get(url, params=params)
-            response.raise_for_status()
-        except httpx.HTTPError as exc:
-            raise ArxivError(f"request to {url} failed: {exc}") from exc
-        finally:
-            self._last = self._clock()
-        return response
+        with self._lock:
+            if self._last is not None:
+                wait = self._min_interval - (self._clock() - self._last)
+                if wait > 0:
+                    self._sleep(wait)
+            try:
+                response = self._http.get(url, params=params)
+                response.raise_for_status()
+            except httpx.HTTPError as exc:
+                raise ArxivError(f"request to {url} failed: {exc}") from exc
+            finally:
+                self._last = self._clock()
+            return response
 
 
 def _text(entry: Element, tag: str) -> str:
