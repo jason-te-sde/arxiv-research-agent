@@ -100,12 +100,20 @@ def test_query_streams_steps_tokens_and_one_final(tmp_path: Path) -> None:
 
 
 def test_session_id_carries_memory_between_queries(tmp_path: Path) -> None:
-    runtime, model = make_runtime(tmp_path, [say("First."), say("Second.")])
+    runtime, model = make_runtime(
+        tmp_path,
+        [
+            call("search_papers", query="react"),
+            say("First."),
+            call("search_papers", query="react"),
+            say("Second."),
+        ],
+    )
     client = TestClient(create_app(runtime))
     first = client.post("/query", json={"question": "one"})
     session = first.headers["x-session-id"]
     client.post("/query", json={"question": "two", "session_id": session})
-    assert [m.text for m in model.inputs[1][1:]] == ["one", "First.", "two"]
+    assert [m.text for m in model.inputs[2][1:]] == ["one", "First.", "two"]
 
 
 def test_empty_question_is_rejected(tmp_path: Path) -> None:

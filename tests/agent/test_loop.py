@@ -10,7 +10,7 @@ from arxiv_agent.agent.memory import ConversationMemory, Turn
 from arxiv_agent.agent.tools import ToolContext, build_tools
 from arxiv_agent.retrieval.retriever import DenseRetriever
 from arxiv_agent.retrieval.store import PaperStore
-from tests.agent.scripted import ScriptedChatModel, call, say
+from tests.agent.scripted import ScriptedChatModel, broken_call, call, say
 from tests.fakes import HashingEmbeddings, chunk
 
 REACT = "2210.03629v3"
@@ -145,7 +145,13 @@ async def test_refusal_is_a_model_error(store: PaperStore) -> None:
 
 
 async def test_unknown_tool_is_an_observation_not_a_crash(store: PaperStore) -> None:
-    model = ScriptedChatModel(script=[call("browse_web", url="x"), say("I could not find that.")])
+    model = ScriptedChatModel(
+        script=[
+            call("browse_web", url="x"),
+            call("search_papers", "c2", query="react"),
+            say(f"Found it [{REACT}#0]."),
+        ]
+    )
     events = await run(agent(store, model), "q")
     finished = [e for e in events if isinstance(e, ToolFinished)]
     assert finished[0].ok is False
@@ -154,9 +160,15 @@ async def test_unknown_tool_is_an_observation_not_a_crash(store: PaperStore) -> 
 
 
 async def test_invalid_arguments_are_an_observation(store: PaperStore) -> None:
-    model = ScriptedChatModel(script=[call("search_papers", wrong="x"), say("No answer.")])
+    model = ScriptedChatModel(
+        script=[
+            call("search_papers", wrong="x"),
+            call("search_papers", "c2", query="react"),
+            say(f"Answer [{REACT}#0]."),
+        ]
+    )
     events = await run(agent(store, model), "q")
-    assert [e.ok for e in events if isinstance(e, ToolFinished)] == [False]
+    assert [e.ok for e in events if isinstance(e, ToolFinished)] == [False, True]
     assert not final(events).fallback
 
 
@@ -181,11 +193,18 @@ async def test_system_prompt_lists_the_papers_and_the_budget(store: PaperStore) 
 async def test_memory_carries_the_conversation(store: PaperStore) -> None:
     memory = ConversationMemory(window_turns=10, summarize=None)
     memory.summary = "The user studies ReAct."
-    model = ScriptedChatModel(script=[say("First."), say("Second.")])
+    model = ScriptedChatModel(
+        script=[
+            call("search_papers", query="react"),
+            say("First."),
+            call("search_papers", query="react"),
+            say("Second."),
+        ]
+    )
     a = agent(store, model)
     await run(a, "first question", memory)
     await run(a, "second question", memory)
-    second = model.inputs[1]
+    second = model.inputs[2]
     assert [m.text for m in second[1:]] == ["first question", "First.", "second question"]
     assert "The user studies ReAct." in second[0].text
     assert memory.messages()[-1].text == "Second."
@@ -199,7 +218,14 @@ async def test_memory_is_updated_before_the_final_event(store: PaperStore) -> No
         return previous
 
     memory = ConversationMemory(window_turns=1, summarize=summarize)
-    model = ScriptedChatModel(script=[say("One."), say("Two.")])
+    model = ScriptedChatModel(
+        script=[
+            call("search_papers", query="react"),
+            say("One."),
+            call("search_papers", query="react"),
+            say("Two."),
+        ]
+    )
     a = agent(store, model)
     await run(a, "q1", memory)
     async for event in a.run("q2", memory):
@@ -227,3 +253,62 @@ async def test_final_reports_the_prompt_size_of_every_call(store: PaperStore) ->
 async def test_prompt_sizes_are_empty_when_the_model_reports_none(store: PaperStore) -> None:
     model = ScriptedChatModel(script=[say("Done.")])
     assert final(await run(agent(store, model), "q")).prompt_tokens == ()
+
+
+async def test_tools_requested_on_the_last_call_are_not_run(store: PaperStore) -> None:
+    model = ScriptedChatModel(
+        script=[
+            call("search_papers", "c1", query="a"),
+            call("search_papers", "c2", query="b"),
+            call("summarize_paper", "c3", arxiv_id=REACT),  # would call the model again
+            say(f"From the passages [{REACT}#0]."),
+        ]
+    )
+    events = await run(agent(store, model), "react reasoning")
+    assert [e.name for e in events if isinstance(e, ToolStarted)] == [
+        "search_papers",
+        "search_papers",
+    ]
+    assert model.calls == 4  # three agent calls and the fallback answer, nothing else
+    assert final(events).reason == "budget_exhausted"
+
+
+async def test_an_ungrounded_answer_gets_one_correction(store: PaperStore) -> None:
+    model = ScriptedChatModel(
+        script=[
+            say("From memory, ReAct interleaves reasoning and acting."),
+            call("search_papers", query="react"),
+            say(f"ReAct interleaves reasoning and acting [{REACT}#0]."),
+        ]
+    )
+    result = final(await run(agent(store, model), "What is ReAct?"))
+    assert not result.fallback
+    assert result.iterations == 3
+    assert "without retrieving" in model.inputs[1][-1].text
+    assert [c.id for c in result.citations] == [f"{REACT}#0"]
+
+
+async def test_answers_that_stay_ungrounded_fall_back(store: PaperStore) -> None:
+    model = ScriptedChatModel(
+        script=[say("one"), say("two"), say("three"), say(f"Grounded [{REACT}#0].")]
+    )
+    result = final(await run(agent(store, model), "react reasoning"))
+    assert result.fallback
+    assert result.reason == "ungrounded_answer"
+    assert model.calls == 4
+    assert result.answer.startswith("Grounded")
+
+
+async def test_arguments_that_are_not_json_are_an_observation(store: PaperStore) -> None:
+    model = ScriptedChatModel(
+        script=[
+            broken_call("search_papers", "query = react, not json"),
+            call("search_papers", "c2", query="react"),
+            say(f"Answer [{REACT}#0]."),
+        ]
+    )
+    events = await run(agent(store, model), "q")
+    finished = [e for e in events if isinstance(e, ToolFinished)]
+    assert [e.ok for e in finished] == [False, True]
+    assert "not valid JSON" in finished[0].summary
+    assert not final(events).fallback

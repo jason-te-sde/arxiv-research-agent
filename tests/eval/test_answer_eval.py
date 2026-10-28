@@ -23,6 +23,10 @@ def items(n: int) -> list[EvalItem]:
     ]
 
 
+def grounded(text: str) -> list[object]:
+    return [call("search_papers", query="react"), say(text)]
+
+
 def make_agent(tmp_path: Path, script: list[object]) -> ResearchAgent:
     store = PaperStore(tmp_path / "c", HashingEmbeddings(), "ans")
     store.replace_paper([chunk(REACT, 0, "react interleaves reasoning traces", title="ReAct")])
@@ -50,7 +54,7 @@ async def test_one_record_per_item_with_what_the_run_used(tmp_path: Path) -> Non
 
 
 async def test_records_are_appended_as_they_finish(tmp_path: Path) -> None:
-    agent = make_agent(tmp_path, [say("one"), say("two")])
+    agent = make_agent(tmp_path, [*grounded("one"), *grounded("two")])
     out = tmp_path / "answers.jsonl"
     await generate_answers(agent, items(2), out)
     assert [json.loads(line)["id"] for line in out.read_text().splitlines()] == ["t00", "t01"]
@@ -59,8 +63,8 @@ async def test_records_are_appended_as_they_finish(tmp_path: Path) -> None:
 
 async def test_a_rerun_resumes_after_the_answered_items(tmp_path: Path) -> None:
     out = tmp_path / "answers.jsonl"
-    await generate_answers(make_agent(tmp_path / "a", [say("one")]), items(1), out)
-    agent = make_agent(tmp_path / "b", [say("two")])
+    await generate_answers(make_agent(tmp_path / "a", grounded("one")), items(1), out)
+    agent = make_agent(tmp_path / "b", grounded("two"))
     records = await generate_answers(agent, items(2), out)
     assert [r.answer for r in records] == ["one", "two"]
 

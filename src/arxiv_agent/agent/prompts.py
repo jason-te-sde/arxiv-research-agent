@@ -22,6 +22,10 @@ so search with specific queries and answer as soon as you have evidence.
 Ingested papers (arxiv_id: title):
 {catalog}"""
 
+GROUND = """\
+You answered without retrieving any passages. Call search_papers (or another tool) \
+first, then answer only from the passages it returns, citing their ids."""
+
 MEMORY = "\n\nSummary of the earlier conversation:\n{summary}"
 
 FALLBACK = """\

@@ -2,8 +2,10 @@
 
 Each iteration is one model call. A call that returns tool calls is a reasoning
 step: the tools run and their observations go back to the model. A call that
-returns only text is the answer. If the budget runs out, the model fails, or the
-answer is empty, the run falls back to direct retrieval: search with the
+returns only text is the answer. An answer given before any
+passage was retrieved is sent back once with a correction. If the budget runs
+out, the model fails, or the answer is empty or still ungrounded, the run
+falls back to direct retrieval: search with the
 question itself and answer from those passages in one call, or, if no model is
 available, return the passages themselves. Every run ends in exactly one Final.
 """
@@ -85,14 +87,25 @@ class ResearchAgent:
                 messages.append(message)
                 calls = [*message.tool_calls, *_invalid_calls(message)]
                 if not calls:
-                    if message.text.strip():
-                        final = _final(
-                            message.text, ctx, iteration, prompt_tokens, fallback=False, reason=None
-                        )
-                        await _remember(memory, question, final.answer)
-                        yield final
-                        return
-                    reason = "empty_answer"
+                    if not message.text.strip():
+                        reason = "empty_answer"
+                        break
+                    if not ctx.seen:
+                        # An answer before any passage was retrieved comes from the
+                        # model's own memory; it is sent back once with a correction.
+                        reason = "ungrounded_answer"
+                        messages.append(HumanMessage(prompts.GROUND))
+                        continue
+                    final = _final(
+                        message.text, ctx, iteration, prompt_tokens, fallback=False, reason=None
+                    )
+                    await _remember(memory, question, final.answer)
+                    yield final
+                    return
+                reason = "budget_exhausted"
+                if iteration == self._max_iterations:
+                    # Nothing would read the results: running them would only cost time,
+                    # model calls inside the tools, and (fetch_paper) corpus changes.
                     break
                 for call in calls:
                     yield ToolStarted(iteration, call["name"], dict(call.get("args") or {}))

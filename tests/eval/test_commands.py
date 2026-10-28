@@ -89,10 +89,10 @@ def test_eval_answers_writes_meta_and_answers(tmp_path: Path) -> None:
     from arxiv_agent.agent.loop import ResearchAgent
     from arxiv_agent.agent.tools import ToolContext, build_tools
     from arxiv_agent.eval.commands import cmd_eval_answers
-    from tests.agent.scripted import ScriptedChatModel, say
+    from tests.agent.scripted import ScriptedChatModel, call, say
 
     store = store_with(tmp_path, QUOTE)
-    model = ScriptedChatModel(script=[say("An answer.")])
+    model = ScriptedChatModel(script=[call("search_papers", query="react"), say("An answer.")])
     retriever = DenseRetriever(store)
     agent = ResearchAgent(
         model, build_tools, lambda: ToolContext(retriever, store, model), retriever

@@ -21,6 +21,22 @@ def call(name: str, call_id: str = "c1", **args: Any) -> AIMessage:
     return AIMessage(content="", tool_calls=[{"name": name, "args": args, "id": call_id}])
 
 
+def broken_call(name: str, raw_args: str, call_id: str = "c1") -> AIMessage:
+    """A tool call whose arguments are not valid JSON, as a small model can emit."""
+    return AIMessage(
+        content="",
+        invalid_tool_calls=[
+            {
+                "name": name,
+                "args": raw_args,
+                "id": call_id,
+                "error": None,
+                "type": "invalid_tool_call",
+            }
+        ],
+    )
+
+
 class ScriptedChatModel(BaseChatModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -63,11 +79,27 @@ class ScriptedChatModel(BaseChatModel):
     ) -> Iterator[ChatGenerationChunk]:
         message = self._next(messages)
         text = message.content if isinstance(message.content, str) else ""
-        if not (text or message.tool_calls or message.response_metadata or message.usage_metadata):
+        if not (
+            text
+            or message.tool_calls
+            or message.invalid_tool_calls
+            or message.response_metadata
+            or message.usage_metadata
+        ):
             # Real providers always send at least one chunk, even for an empty reply.
             yield ChatGenerationChunk(message=AIMessageChunk(content=""))
         for start in range(0, len(text), 4):
             yield ChatGenerationChunk(message=AIMessageChunk(content=text[start : start + 4]))
+        if message.invalid_tool_calls:
+            yield ChatGenerationChunk(
+                message=AIMessageChunk(
+                    content="",
+                    tool_call_chunks=[
+                        tool_call_chunk(name=tc["name"], args=tc["args"], id=tc["id"], index=i)
+                        for i, tc in enumerate(message.invalid_tool_calls)
+                    ],
+                )
+            )
         if message.tool_calls:
             yield ChatGenerationChunk(
                 message=AIMessageChunk(
