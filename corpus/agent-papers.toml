@@ -1,0 +1,263 @@
+# Pinned corpus: LLM agents, tool use, planning, and retrieval augmentation.
+# Each entry pins an exact arXiv version; ingestion refuses a title mismatch.
+
+[[paper]]
+id = "2005.11401v4"
+title = "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"
+
+[[paper]]
+id = "2010.03768v2"
+title = "ALFWorld: Aligning Text and Embodied Environments for Interactive Learning"
+
+[[paper]]
+id = "2112.09332v3"
+title = "WebGPT: Browser-assisted question-answering with human feedback"
+
+[[paper]]
+id = "2201.07207v2"
+title = "Language Models as Zero-Shot Planners: Extracting Actionable Knowledge for Embodied Agents"
+
+[[paper]]
+id = "2201.11903v6"
+title = "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models"
+
+[[paper]]
+id = "2203.11171v4"
+title = "Self-Consistency Improves Chain of Thought Reasoning in Language Models"
+
+[[paper]]
+id = "2204.01691v2"
+title = "Do As I Can, Not As I Say: Grounding Language in Robotic Affordances"
+
+[[paper]]
+id = "2207.01206v4"
+title = "WebShop: Towards Scalable Real-World Web Interaction with Grounded Language Agents"
+
+[[paper]]
+id = "2210.03350v3"
+title = "Measuring and Narrowing the Compositionality Gap in Language Models"
+
+[[paper]]
+id = "2210.03493v1"
+title = "Automatic Chain of Thought Prompting in Large Language Models"
+
+[[paper]]
+id = "2210.03629v3"
+title = "ReAct: Synergizing Reasoning and Acting in Language Models"
+
+[[paper]]
+id = "2211.10435v2"
+title = "PAL: Program-aided Language Models"
+
+[[paper]]
+id = "2212.10509v2"
+title = "Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions"
+
+[[paper]]
+id = "2302.01560v3"
+title = "Describe, Explain, Plan and Select: Interactive Planning with Large Language Models Enables Open-World Multi-Task Agents"
+
+[[paper]]
+id = "2302.04761v1"
+title = "Toolformer: Language Models Can Teach Themselves to Use Tools"
+
+[[paper]]
+id = "2303.09014v1"
+title = "ART: Automatic multi-step reasoning and tool-use for large language models"
+
+[[paper]]
+id = "2303.11366v4"
+title = "Reflexion: Language Agents with Verbal Reinforcement Learning"
+
+[[paper]]
+id = "2303.17580v4"
+title = "HuggingGPT: Solving AI Tasks with ChatGPT and its Friends in Hugging Face"
+
+[[paper]]
+id = "2303.17651v2"
+title = "Self-Refine: Iterative Refinement with Self-Feedback"
+
+[[paper]]
+id = "2303.17760v2"
+title = "CAMEL: Communicative Agents for \"Mind\" Exploration of Large Language Model Society"
+
+[[paper]]
+id = "2304.03442v2"
+title = "Generative Agents: Interactive Simulacra of Human Behavior"
+
+[[paper]]
+id = "2304.05376v5"
+title = "ChemCrow: Augmenting large-language models with chemistry tools"
+
+[[paper]]
+id = "2305.04091v3"
+title = "Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought Reasoning by Large Language Models"
+
+[[paper]]
+id = "2305.06983v2"
+title = "Active Retrieval Augmented Generation"
+
+[[paper]]
+id = "2305.10601v2"
+title = "Tree of Thoughts: Deliberate Problem Solving with Large Language Models"
+
+[[paper]]
+id = "2305.11738v4"
+title = "CRITIC: Large Language Models Can Self-Correct with Tool-Interactive Critiquing"
+
+[[paper]]
+id = "2305.14992v2"
+title = "Reasoning with Language Model is Planning with World Model"
+
+[[paper]]
+id = "2305.15334v1"
+title = "Gorilla: Large Language Model Connected with Massive APIs"
+
+[[paper]]
+id = "2305.16291v2"
+title = "Voyager: An Open-Ended Embodied Agent with Large Language Models"
+
+[[paper]]
+id = "2305.18323v1"
+title = "ReWOO: Decoupling Reasoning from Observations for Efficient Augmented Language Models"
+
+[[paper]]
+id = "2306.06070v3"
+title = "Mind2Web: Towards a Generalist Agent for the Web"
+
+[[paper]]
+id = "2306.14898v3"
+title = "InterCode: Standardizing and Benchmarking Interactive Coding with Execution Feedback"
+
+[[paper]]
+id = "2307.07924v5"
+title = "ChatDev: Communicative Agents for Software Development"
+
+[[paper]]
+id = "2307.13854v4"
+title = "WebArena: A Realistic Web Environment for Building Autonomous Agents"
+
+[[paper]]
+id = "2307.16789v2"
+title = "ToolLLM: Facilitating Large Language Models to Master 16000+ Real-world APIs"
+
+[[paper]]
+id = "2308.00352v7"
+title = "MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework"
+
+[[paper]]
+id = "2308.03688v3"
+title = "AgentBench: Evaluating LLMs as Agents"
+
+[[paper]]
+id = "2308.08155v2"
+title = "AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation"
+
+[[paper]]
+id = "2308.10848v3"
+title = "AgentVerse: Facilitating Multi-Agent Collaboration and Exploring Emergent Behaviors"
+
+[[paper]]
+id = "2308.11432v7"
+title = "A Survey on Large Language Model based Autonomous Agents"
+
+[[paper]]
+id = "2309.02427v3"
+title = "Cognitive Architectures for Language Agents"
+
+[[paper]]
+id = "2309.07864v3"
+title = "The Rise and Potential of Large Language Model Based Agents: A Survey"
+
+[[paper]]
+id = "2310.03714v1"
+title = "DSPy: Compiling Declarative Language Model Calls into Self-Improving Pipelines"
+
+[[paper]]
+id = "2310.04406v3"
+title = "Language Agent Tree Search Unifies Reasoning Acting and Planning in Language Models"
+
+[[paper]]
+id = "2310.05915v1"
+title = "FireAct: Toward Language Agent Fine-tuning"
+
+[[paper]]
+id = "2310.06770v3"
+title = "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?"
+
+[[paper]]
+id = "2310.08560v2"
+title = "MemGPT: Towards LLMs as Operating Systems"
+
+[[paper]]
+id = "2310.11511v1"
+title = "Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection"
+
+[[paper]]
+id = "2310.12823v2"
+title = "AgentTuning: Enabling Generalized Agent Abilities for LLMs"
+
+[[paper]]
+id = "2311.12983v1"
+title = "GAIA: a benchmark for General AI Assistants"
+
+[[paper]]
+id = "2311.17541v3"
+title = "TaskWeaver: A Code-First Agent Framework"
+
+[[paper]]
+id = "2312.04511v3"
+title = "An LLM Compiler for Parallel Function Calling"
+
+[[paper]]
+id = "2312.10997v5"
+title = "Retrieval-Augmented Generation for Large Language Models: A Survey"
+
+[[paper]]
+id = "2312.13771v3"
+title = "AppAgent: Multimodal Agents as Smartphone Users"
+
+[[paper]]
+id = "2401.15884v3"
+title = "Corrective Retrieval Augmented Generation"
+
+[[paper]]
+id = "2401.18059v1"
+title = "RAPTOR: Recursive Abstractive Processing for Tree-Organized Retrieval"
+
+[[paper]]
+id = "2402.01030v4"
+title = "Executable Code Actions Elicit Better LLM Agents"
+
+[[paper]]
+id = "2402.01680v2"
+title = "Large Language Model based Multi-Agents: A Survey of Progress and Challenges"
+
+[[paper]]
+id = "2402.07456v2"
+title = "OS-Copilot: Towards Generalist Computer Agents with Self-Improvement"
+
+[[paper]]
+id = "2404.07972v2"
+title = "OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments"
+
+[[paper]]
+id = "2404.16130v2"
+title = "From Local to Global: A Graph RAG Approach to Query-Focused Summarization"
+
+[[paper]]
+id = "2405.15793v3"
+title = "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering"
+
+[[paper]]
+id = "2406.12045v1"
+title = "$\u03c4$-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains"
+
+[[paper]]
+id = "2407.01489v2"
+title = "Agentless: Demystifying LLM-based Software Engineering Agents"
+
+[[paper]]
+id = "2407.16741v3"
+title = "OpenHands: An Open Platform for AI Software Developers as Generalist Agents"
+
