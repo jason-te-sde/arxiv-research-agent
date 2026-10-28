@@ -113,3 +113,11 @@ def test_eval_retrieval_rejects_an_unknown_mode() -> None:
     with pytest.raises(SystemExit) as exc:
         main(["eval", "retrieval", "--mode", "sparse"])
     assert exc.value.code == 2
+
+
+def test_eval_lists_answer_judge_and_dashboard(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        main(["eval", "--help"])
+    out = capsys.readouterr().out
+    for command in ("answers", "judge", "dashboard"):
+        assert command in out

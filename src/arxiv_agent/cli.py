@@ -8,12 +8,13 @@ import os
 import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Protocol, TextIO
+from typing import Any, Protocol, TextIO
 
 from arxiv_agent import __version__
 from arxiv_agent.agent.events import Final, Token, ToolStarted
 from arxiv_agent.agent.loop import ResearchAgent
 from arxiv_agent.config import Settings
+from arxiv_agent.eval.dataset import EvalItem
 from arxiv_agent.ingest.corpus import load_corpus
 from arxiv_agent.ingest.pipeline import IngestResult
 
@@ -57,8 +58,14 @@ def build_parser() -> argparse.ArgumentParser:
     check = evals.add_parser("check-dataset", help="check every evidence quote is retrievable")
     retrieval = evals.add_parser("retrieval", help="MRR@5, hit rate and recall per mode")
     retrieval.add_argument("--mode", choices=["dense", "two-stage", "both"], default="both")
-    for sub in (check, retrieval):
+    answers = evals.add_parser("answers", help="run the agent over a question set")
+    answers.add_argument("--resume", type=Path, help="continue an interrupted run directory")
+    for sub in (check, retrieval, answers):
         sub.add_argument("--set", choices=["dev", "test"], default="test", dest="question_set")
+    judge = evals.add_parser("judge", help="score an answers run with RAGAS")
+    judge.add_argument("run_dir", type=Path)
+    dashboard = evals.add_parser("dashboard", help="write the HTML dashboard of all runs")
+    dashboard.add_argument("--out", type=Path, default=Path("docs/eval/dashboard.html"))
 
     serve = commands.add_parser("serve", help="run the HTTP API")
     serve.add_argument("--host", default="127.0.0.1")
@@ -127,8 +134,19 @@ def _dispatch_eval(args: argparse.Namespace, settings: Settings) -> int:  # prag
     from arxiv_agent.ingest.pdf import extract_text
     from arxiv_agent.retrieval.retriever import Retriever
 
+    if args.eval_command == "dashboard":
+        from arxiv_agent.eval.dashboard import render_dashboard
+
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(render_dashboard(sorted(p for p in _RUNS.glob("*") if p.is_dir())))
+        print(f"wrote {args.out}")
+        return 0
+    if args.eval_command == "judge":
+        return _judge(args.run_dir, settings)
     dataset = _QUESTIONS / f"{args.question_set}.jsonl"
     items = load_items(dataset)
+    if args.eval_command == "answers":
+        return _answers(args, settings, dataset, items)
     store = runtime.open_store(settings)
     if args.eval_command == "check-dataset":
         papers = {ev.arxiv_id for item in items for ev in item.evidence}
@@ -151,6 +169,53 @@ def _dispatch_eval(args: argparse.Namespace, settings: Settings) -> int:  # prag
         print(f"wrote {run_dir / 'retrieval.json'}")
         return 0
     raise AssertionError(f"unhandled eval command {args.eval_command}")
+
+
+def _answers(
+    args: argparse.Namespace, settings: Settings, dataset: Path, items: Sequence[EvalItem]
+) -> int:  # pragma: no cover - runs the real agent
+    from arxiv_agent.eval.commands import cmd_eval_answers
+    from arxiv_agent.eval.runs import new_run_dir, ollama_digests, run_meta
+    from arxiv_agent.runtime import Runtime
+
+    run_dir = args.resume or new_run_dir(_RUNS, f"answers-{args.question_set}")
+    meta = run_meta(settings, dataset, _CORPUS) | {
+        "provider": settings.provider,
+        "agent_model": settings.agent_model,
+        "max_iterations": settings.max_iterations,
+    }
+    if settings.provider == "ollama":
+        meta["ollama_digests"] = ollama_digests(settings.ollama_url, [settings.agent_model])
+    agent = Runtime.from_settings(settings, allow_fetch=False).agent
+    cmd_eval_answers(agent, items, run_dir, meta, sys.stdout)
+    print(f"wrote {run_dir / 'answers.jsonl'}")
+    return 0
+
+
+def _judge(run_dir: Path, settings: Settings) -> int:  # pragma: no cover - runs the judge
+    import json
+
+    from arxiv_agent.agent.models import make_chat_model
+    from arxiv_agent.eval import ragas_eval
+    from arxiv_agent.eval.commands import cmd_eval_judge
+    from arxiv_agent.eval.dataset import load_items
+    from arxiv_agent.eval.runs import ollama_digests
+    from arxiv_agent.retrieval.embeddings import make_embeddings
+
+    meta = json.loads((run_dir / "meta.json").read_text())
+    items = load_items(_QUESTIONS / meta["dataset"])
+    llm = make_chat_model(settings, "judge")
+    embeddings = make_embeddings(settings.embed_model)
+    judge_meta: dict[str, object] = {"judge_model": settings.judge_model}
+    if settings.provider == "ollama":
+        judge_meta["judge_digest"] = ollama_digests(settings.ollama_url, [settings.judge_model])
+
+    def judge(records: Sequence[Any], by_id: Mapping[str, Any]) -> list[Any]:
+        return ragas_eval.judge(records, by_id, llm, embeddings)
+
+    cmd_eval_judge(run_dir, items, judge, judge_meta, sys.stdout)
+    print(f"wrote {run_dir / 'summary.json'}")
+    return 0
 
 
 def cmd_ingest_corpus(

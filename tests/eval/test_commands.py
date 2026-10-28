@@ -1,5 +1,6 @@
 import io
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from arxiv_agent.config import Settings
@@ -82,3 +83,49 @@ def test_run_meta_records_what_the_numbers_depend_on(tmp_path: Path) -> None:
         "started_at",
     ):
         assert key in meta
+
+
+def test_eval_answers_writes_meta_and_answers(tmp_path: Path) -> None:
+    from arxiv_agent.agent.loop import ResearchAgent
+    from arxiv_agent.agent.tools import ToolContext, build_tools
+    from arxiv_agent.eval.commands import cmd_eval_answers
+    from tests.agent.scripted import ScriptedChatModel, say
+
+    store = store_with(tmp_path, QUOTE)
+    model = ScriptedChatModel(script=[say("An answer.")])
+    retriever = DenseRetriever(store)
+    agent = ResearchAgent(
+        model, build_tools, lambda: ToolContext(retriever, store, model), retriever
+    )
+    run_dir = tmp_path / "run"
+    cmd_eval_answers(agent, [ITEM], run_dir, {"agent_model": "m"}, io.StringIO())
+    assert json.loads((run_dir / "meta.json").read_text()) == {"agent_model": "m"}
+    assert json.loads((run_dir / "answers.jsonl").read_text())["answer"] == "An answer."
+
+
+def test_eval_judge_writes_scores_and_summary(tmp_path: Path) -> None:
+    from arxiv_agent.eval.answer_eval import AnswerRecord
+    from arxiv_agent.eval.commands import cmd_eval_judge
+    from arxiv_agent.eval.ragas_eval import ScoreRecord
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "meta.json").write_text(json.dumps({"agent_model": "m"}))
+    record = AnswerRecord("t01", "q", "a", ("c",), (), (), (), False, None, 1, 2.0)
+    (run_dir / "answers.jsonl").write_text(record.to_json() + "\n")
+
+    def fake_judge(
+        records: Sequence[AnswerRecord], items: Mapping[str, EvalItem]
+    ) -> list[ScoreRecord]:
+        assert [r.id for r in records] == ["t01"]
+        assert set(items) == {"t01"}
+        return [ScoreRecord("t01", {"faithfulness": 0.5})]
+
+    out = io.StringIO()
+    cmd_eval_judge(run_dir, [ITEM], fake_judge, {"judge_model": "j"}, out)
+    summary = json.loads((run_dir / "summary.json").read_text())
+    assert summary["meta"]["agent_model"] == "m"
+    assert summary["meta"]["judge_model"] == "j"
+    assert summary["ragas"]["mean"]["faithfulness"] == 0.5
+    assert json.loads((run_dir / "scores.jsonl").read_text())["scores"] == {"faithfulness": 0.5}
+    assert "faithfulness" in out.getvalue()

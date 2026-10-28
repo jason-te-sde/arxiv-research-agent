@@ -64,11 +64,15 @@ class Runtime:
     runs_dir: Path
 
     @classmethod
-    def from_settings(cls, settings: Settings, runs_dir: Path = Path("eval/runs")) -> Runtime:
+    def from_settings(
+        cls, settings: Settings, runs_dir: Path = Path("eval/runs"), *, allow_fetch: bool = True
+    ) -> Runtime:
+        """Wire everything. ``allow_fetch=False`` (evaluation) keeps the corpus fixed:
+        no ingestion endpoint and a fetch_paper tool that declines."""
         store = open_store(settings)
         retriever = make_retriever(settings, store, "two-stage")
-        client = ArxivClient(make_http_client())
-        ingestor = make_ingestor(settings, store, client)
+        client = ArxivClient(make_http_client()) if allow_fetch else None
+        ingestor = make_ingestor(settings, store, client) if allow_fetch else None
         model = make_chat_model(settings, "agent")
         agent = ResearchAgent(
             model=model,

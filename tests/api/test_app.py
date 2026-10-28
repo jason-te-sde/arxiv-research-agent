@@ -194,3 +194,20 @@ def test_the_real_runtime_wires_up(tmp_path: Path) -> None:
     runtime = Runtime.from_settings(settings, runs_dir=tmp_path / "runs")
     response = TestClient(create_app(runtime)).get("/healthz")
     assert response.json() == {"status": "ok", "papers": 0}
+
+
+def test_dashboard_renders_the_runs(tmp_path: Path) -> None:
+    runtime, _ = make_runtime(tmp_path, [])
+    response = TestClient(create_app(runtime)).get("/dashboard")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "No evaluation runs yet" in response.text
+
+
+@pytest.mark.slow
+def test_an_evaluation_runtime_cannot_fetch_papers(tmp_path: Path) -> None:
+    from arxiv_agent.config import Settings
+
+    settings = Settings.from_env({"ARXIV_AGENT_DATA_DIR": str(tmp_path)})
+    runtime = Runtime.from_settings(settings, runs_dir=tmp_path / "runs", allow_fetch=False)
+    assert runtime.ingestor is None

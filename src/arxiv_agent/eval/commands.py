@@ -2,15 +2,25 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, TextIO
 
+from arxiv_agent.agent.loop import ResearchAgent
+from arxiv_agent.eval.answer_eval import (
+    AnswerRecord,
+    generate_answers,
+    load_records,
+    operational_stats,
+)
 from arxiv_agent.eval.dataset import EvalItem, check_dataset
+from arxiv_agent.eval.ragas_eval import ScoreRecord
 from arxiv_agent.eval.relevance import is_relevant
 from arxiv_agent.eval.retrieval_eval import evaluate_retrieval
+from arxiv_agent.eval.runs import build_summary, utc_now
 from arxiv_agent.retrieval.retriever import Retriever
 from arxiv_agent.retrieval.store import PaperStore
 
@@ -50,3 +60,47 @@ def cmd_eval_retrieval(
             file=out,
         )
     return result
+
+
+def cmd_eval_answers(
+    agent: ResearchAgent,
+    items: Sequence[EvalItem],
+    run_dir: Path,
+    meta: Mapping[str, Any],
+    out: TextIO,
+) -> list[AnswerRecord]:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    meta_path = run_dir / "meta.json"
+    if not meta_path.exists():  # a resumed run keeps the metadata it started with
+        meta_path.write_text(json.dumps(dict(meta), indent=2) + "\n")
+    records = asyncio.run(generate_answers(agent, items, run_dir / "answers.jsonl"))
+    stats = operational_stats(records)
+    print(json.dumps(stats, indent=2), file=out)
+    return records
+
+
+Judge = Callable[[Sequence[AnswerRecord], Mapping[str, EvalItem]], list[ScoreRecord]]
+
+
+def cmd_eval_judge(
+    run_dir: Path,
+    items: Sequence[EvalItem],
+    judge: Judge,
+    judge_meta: Mapping[str, Any],
+    out: TextIO,
+) -> dict[str, Any]:
+    records = load_records(run_dir / "answers.jsonl")
+    by_id = {i.id: i for i in items}
+    scores = judge(records, {r.id: by_id[r.id] for r in records})
+    (run_dir / "scores.jsonl").write_text(
+        "".join(json.dumps({"id": s.id, "scores": s.scores}) + "\n" for s in scores)
+    )
+    meta = {**json.loads((run_dir / "meta.json").read_text()), **judge_meta}
+    meta["judged_at"] = utc_now()
+    summary = build_summary(meta, records, scores)
+    (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    for metric, value in summary["ragas"]["mean"].items():
+        unscored = summary["ragas"]["unscored"][metric]
+        shown = "-" if value is None else f"{value:.3f}"
+        print(f"{metric:<18} {shown}  (unscored: {unscored})", file=out)
+    return summary

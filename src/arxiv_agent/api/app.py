@@ -15,6 +15,7 @@ from typing import Annotated, Any
 
 from fastapi import FastAPI, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, field_validator
 from sse_starlette import EventSourceResponse
 
@@ -74,6 +75,13 @@ def create_app(runtime: Runtime) -> FastAPI:
             {"arxiv_id": p.arxiv_id, "title": p.title, "chunks": p.chunks}
             for p in runtime.store.papers()
         ]
+
+    @app.get("/dashboard", response_class=HTMLResponse)
+    def dashboard() -> str:
+        from arxiv_agent.eval.dashboard import render_dashboard
+
+        runs = sorted(p for p in runtime.runs_dir.glob("*") if p.is_dir())
+        return render_dashboard(runs)
 
     @app.post("/ingest")
     def ingest(request: IngestRequest) -> dict[str, Any]:

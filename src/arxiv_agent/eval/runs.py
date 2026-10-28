@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import httpx
+
 from arxiv_agent import __version__
 from arxiv_agent.config import Settings
+from arxiv_agent.eval.answer_eval import AnswerRecord, operational_stats
 from arxiv_agent.eval.dataset import file_hash
+from arxiv_agent.eval.ragas_eval import ScoreRecord, summarize
 
 
 def utc_now() -> str:
@@ -52,4 +57,42 @@ def run_meta(settings: Settings, dataset: Path, corpus: Path) -> dict[str, Any]:
         "k_candidates": settings.k_candidates,
         "k_final": settings.k_final,
         "started_at": utc_now(),
+    }
+
+
+def ollama_digests(
+    base_url: str, names: Sequence[str], http: httpx.Client | None = None
+) -> dict[str, str]:
+    """The exact model build behind each Ollama tag, so a run names what it ran."""
+    client = http or httpx.Client(timeout=10.0)
+    try:
+        response = client.get(f"{base_url.rstrip('/')}/api/tags")
+        response.raise_for_status()
+        installed = {m["name"]: m["digest"] for m in response.json().get("models", [])}
+    except (httpx.HTTPError, ValueError, KeyError):
+        return dict.fromkeys(names, "unavailable")
+    return {name: installed.get(name, "not installed") for name in names}
+
+
+def build_summary(
+    meta: Mapping[str, Any], records: Sequence[AnswerRecord], scores: Sequence[ScoreRecord]
+) -> dict[str, Any]:
+    by_id = {s.id: s.scores for s in scores}
+    return {
+        "meta": dict(meta),
+        "ragas": summarize(scores),
+        "operations": operational_stats(records),
+        "items": [
+            {
+                "id": r.id,
+                "question": r.question,
+                "fallback": r.fallback,
+                "reason": r.reason,
+                "iterations": r.iterations,
+                "latency_s": r.latency_s,
+                "citations": len(r.citations),
+                "scores": by_id.get(r.id, {}),
+            }
+            for r in records
+        ],
     }
