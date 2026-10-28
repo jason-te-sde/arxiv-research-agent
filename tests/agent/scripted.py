@@ -24,7 +24,8 @@ def call(name: str, call_id: str = "c1", **args: Any) -> AIMessage:
 class ScriptedChatModel(BaseChatModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    script: list[AIMessage | Exception]
+    # Any, not AIMessage | Exception: pydantic would try to coerce exceptions into messages.
+    script: list[Any]
     inputs: list[list[BaseMessage]] = Field(default_factory=list)
     bound_tools: list[str] = Field(default_factory=list)
     _cursor: int = PrivateAttr(default=0)
@@ -41,6 +42,7 @@ class ScriptedChatModel(BaseChatModel):
         self._cursor += 1
         if isinstance(step, Exception):
             raise step
+        assert isinstance(step, AIMessage)
         return step
 
     def _generate(
@@ -61,6 +63,9 @@ class ScriptedChatModel(BaseChatModel):
     ) -> Iterator[ChatGenerationChunk]:
         message = self._next(messages)
         text = message.content if isinstance(message.content, str) else ""
+        if not text and not message.tool_calls and not message.response_metadata:
+            # Real providers always send at least one chunk, even for an empty reply.
+            yield ChatGenerationChunk(message=AIMessageChunk(content=""))
         for start in range(0, len(text), 4):
             yield ChatGenerationChunk(message=AIMessageChunk(content=text[start : start + 4]))
         if message.tool_calls:
@@ -74,6 +79,10 @@ class ScriptedChatModel(BaseChatModel):
                         for i, tc in enumerate(message.tool_calls)
                     ],
                 )
+            )
+        if message.response_metadata:
+            yield ChatGenerationChunk(
+                message=AIMessageChunk(content="", response_metadata=message.response_metadata)
             )
 
     def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> ScriptedChatModel:

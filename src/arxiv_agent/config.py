@@ -14,7 +14,7 @@ _PREFIX = "ARXIV_AGENT_"
 # The models the published numbers were measured with (docs/evaluation.md).
 _MODEL_DEFAULTS: dict[Provider, tuple[str, str]] = {
     "ollama": ("qwen3:8b", "llama3.1:8b"),
-    "anthropic": ("claude-sonnet-5-5", "claude-sonnet-5-5"),
+    "anthropic": ("claude-opus-5-5", "claude-opus-5-5"),
 }
 
 
