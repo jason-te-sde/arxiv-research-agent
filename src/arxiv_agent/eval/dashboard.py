@@ -143,13 +143,15 @@ def _retrieval_section(runs: Sequence[tuple[str, dict[str, Any]]]) -> str:
 def _answers_section(runs: Sequence[tuple[str, dict[str, Any]]]) -> str:
     if not runs:
         return ""
-    name, data = runs[-1]
+    # The headline is the newest test-set run; a dev run only when there is none.
+    test_runs = [r for r in runs if r[1]["meta"].get("dataset") == "test.jsonl"]
+    name, data = (test_runs or list(runs))[-1]
     ragas, ops, meta = data["ragas"], data["operations"], data["meta"]
     rows = [(m, [("latest", ragas["mean"].get(m), "var(--series-1)")]) for m in METRICS]
     unscored = ", ".join(f"{m} {n}" for m, n in ragas["unscored"].items() if n) or "none"
     stats = [
         (f"{ops['fallback_rate']:.0%}", "fell back to direct retrieval"),
-        (f"{ops['mean_iterations']:.2f}", "model calls per question"),
+        (f"{ops['mean_iterations']:.2f}", "agent calls per question (excl. fallback)"),
         (f"{ops['latency_p50_s']:.0f} s", "median latency"),
         (f"{ops['cited_rate']:.0%}", "answers with a verified citation"),
     ]

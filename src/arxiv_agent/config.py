@@ -11,9 +11,10 @@ Provider = Literal["ollama", "anthropic"]
 
 _PREFIX = "ARXIV_AGENT_"
 
-# The models the published numbers were measured with (docs/evaluation.md).
+# The models the published numbers were measured with (docs/evaluation.md). The
+# agent is qwen3:4b rather than 8b to keep a 16 GB machine usable (ADR 5).
 _MODEL_DEFAULTS: dict[Provider, tuple[str, str]] = {
-    "ollama": ("qwen3:8b", "llama3.1:8b"),
+    "ollama": ("qwen3:4b", "llama3.1:8b"),
     "anthropic": ("claude-opus-5-5", "claude-opus-5-5"),
 }
 

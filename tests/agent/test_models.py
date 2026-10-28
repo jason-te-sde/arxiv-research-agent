@@ -10,7 +10,7 @@ from arxiv_agent.config import Settings
 def test_ollama_agent_model_is_deterministic_and_does_not_think() -> None:
     model = make_chat_model(Settings.from_env({}), "agent")
     assert isinstance(model, ChatOllama)
-    assert model.model == "qwen3:8b"
+    assert model.model == "qwen3:4b"
     assert model.reasoning is False
     assert model.temperature == 0
     assert model.seed == 0

@@ -28,13 +28,18 @@ def retrieval_run(root: Path, name: str, mrr_dense: float, mrr_two: float) -> Pa
     return run
 
 
-def answer_run(root: Path, question: str) -> Path:
-    run = root / "20261028T210000Z-answers-test"
+def answer_run(
+    root: Path,
+    question: str,
+    name: str = "20261028T210000Z-answers-test",
+    dataset: str = "test.jsonl",
+) -> Path:
+    run = root / name
     run.mkdir(parents=True)
     summary = {
         "meta": {
             "git_sha": "abcdef123",
-            "dataset": "test.jsonl",
+            "dataset": dataset,
             "agent_model": "qwen3:8b",
             "judge_model": "llama3.1:8b",
             "started_at": "2026-10-28T21:00:00Z",
@@ -125,3 +130,16 @@ def test_question_text_is_escaped(tmp_path: Path) -> None:
 
 def test_page_defines_a_dark_mode(tmp_path: Path) -> None:
     assert "prefers-color-scheme: dark" in render_dashboard([])
+
+
+def test_answer_headline_prefers_the_test_set_over_a_newer_dev_run(tmp_path: Path) -> None:
+    test = answer_run(tmp_path, "test question")
+    dev = answer_run(tmp_path, "dev question", "20261028T230000Z-answers-dev", "dev.jsonl")
+    html = render_dashboard([test, dev])
+    headline = html.split('id="answers"')[1].split("</section>")[0]
+    assert "test.jsonl" in headline
+
+
+def test_the_calls_statistic_says_what_it_counts(tmp_path: Path) -> None:
+    html = render_dashboard([answer_run(tmp_path, "q")])
+    assert "agent calls per question" in html
