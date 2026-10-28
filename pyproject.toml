@@ -63,7 +63,12 @@ explicit = true
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-filterwarnings = ["error"]
+filterwarnings = [
+  "error",
+  # GitHub's macOS runners are VMs without Metal; torch warns once when it probes
+  # for an MPS device. Every model here runs on CPU, so the probe result is unused.
+  "ignore:Skipping device Apple Paravirtual device:UserWarning",
+]
 markers = [
   "slow: loads real embedding / cross-encoder models (downloads them on first run)",
 ]
