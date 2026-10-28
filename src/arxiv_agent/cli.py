@@ -52,6 +52,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     commands.add_parser("papers", help="list the stored papers")
 
+    evaluate = commands.add_parser("eval", help="evaluate retrieval and answers")
+    evals = evaluate.add_subparsers(dest="eval_command", metavar="EVAL_COMMAND", required=True)
+    check = evals.add_parser("check-dataset", help="check every evidence quote is retrievable")
+    retrieval = evals.add_parser("retrieval", help="MRR@5, hit rate and recall per mode")
+    retrieval.add_argument("--mode", choices=["dense", "two-stage", "both"], default="both")
+    for sub in (check, retrieval):
+        sub.add_argument("--set", choices=["dev", "test"], default="test", dest="question_set")
+
     serve = commands.add_parser("serve", help="run the HTTP API")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -101,7 +109,48 @@ def _dispatch(args: argparse.Namespace, settings: Settings) -> int:  # pragma: n
             return _report(results, sys.stdout)
         meta = local_meta(args.pdf.read_bytes(), args.title)
         return _report([ingestor.ingest_pdf(args.pdf, meta)], sys.stdout)
+    if args.command == "eval":
+        return _dispatch_eval(args, settings)
     raise AssertionError(f"unhandled command {args.command}")
+
+
+_QUESTIONS = Path("eval/questions")
+_CORPUS = Path("corpus/agent-papers.toml")
+_RUNS = Path("eval/runs")
+
+
+def _dispatch_eval(args: argparse.Namespace, settings: Settings) -> int:  # pragma: no cover
+    from arxiv_agent import runtime
+    from arxiv_agent.eval.commands import cmd_check_dataset, cmd_eval_retrieval
+    from arxiv_agent.eval.dataset import load_items
+    from arxiv_agent.eval.runs import new_run_dir, run_meta
+    from arxiv_agent.ingest.pdf import extract_text
+    from arxiv_agent.retrieval.retriever import Retriever
+
+    dataset = _QUESTIONS / f"{args.question_set}.jsonl"
+    items = load_items(dataset)
+    store = runtime.open_store(settings)
+    if args.eval_command == "check-dataset":
+        papers = {ev.arxiv_id for item in items for ev in item.evidence}
+        texts = {
+            p: extract_text(settings.pdf_dir / f"{p}.pdf").text
+            for p in sorted(papers)
+            if (settings.pdf_dir / f"{p}.pdf").exists()
+        }
+        return cmd_check_dataset(items, texts, store, sys.stdout)
+    if args.eval_command == "retrieval":
+        modes: list[runtime.RetrievalMode] = (
+            ["dense", "two-stage"] if args.mode == "both" else [args.mode]
+        )
+        retrievers: dict[str, Retriever] = {
+            m: runtime.make_retriever(settings, store, m) for m in modes
+        }
+        run_dir = new_run_dir(_RUNS, f"retrieval-{args.question_set}")
+        meta = run_meta(settings, dataset, _CORPUS)
+        cmd_eval_retrieval(retrievers, items, run_dir, meta, sys.stdout, k=settings.k_final)
+        print(f"wrote {run_dir / 'retrieval.json'}")
+        return 0
+    raise AssertionError(f"unhandled eval command {args.eval_command}")
 
 
 def cmd_ingest_corpus(

@@ -99,3 +99,17 @@ async def test_ask_prints_the_answer_and_its_sources(tmp_path: Path) -> None:
     assert "It acts [2210.03629v3#0]." in out.getvalue()
     assert "[2210.03629v3#0] ReAct, p.2" in out.getvalue()
     assert "search_papers" in err.getvalue()
+
+
+def test_eval_has_its_subcommands(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        main(["eval", "--help"])
+    out = capsys.readouterr().out
+    assert "check-dataset" in out
+    assert "retrieval" in out
+
+
+def test_eval_retrieval_rejects_an_unknown_mode() -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["eval", "retrieval", "--mode", "sparse"])
+    assert exc.value.code == 2
