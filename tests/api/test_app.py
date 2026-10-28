@@ -230,7 +230,8 @@ def test_model_down_streams_a_fallback_answer_not_an_error(tmp_path: Path) -> No
     assert events[0][1]["reason"] == "model_error"
 
 
-@pytest.mark.parametrize("session_id", ["会话-1", "a b", "x" * 129])
+# A non-ASCII id (two CJK characters, written as code points: the repo is English-only).
+@pytest.mark.parametrize("session_id", [chr(0x4F1A) + chr(0x8BDD) + "-1", "a b", "x" * 129])
 def test_session_ids_outside_the_safe_alphabet_are_rejected(
     tmp_path: Path, session_id: str
 ) -> None:
