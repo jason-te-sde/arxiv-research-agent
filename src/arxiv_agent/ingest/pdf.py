@@ -52,9 +52,11 @@ _GARBAGE_CONTROLS = 3
 # A line shorter than this fraction of the page's median line ends its paragraph
 # when it also ends a sentence: it is the ragged last line of that paragraph.
 _SHORT_LINE = 0.75
-# A references heading in the first part of a paper is a section of a survey or
-# a table of contents, not the start of the bibliography.
-_REFERENCES_MIN_POSITION = 0.3
+# A references heading starts the bibliography only if citations follow it; a
+# year within this many characters tells it apart from a table-of-contents line.
+# (Position in the text does not: long appendices put the bibliography at 15%.)
+_BIBLIOGRAPHY_WINDOW = 2000
+_YEAR = re.compile(r"\b(?:19|20)\d\d\b")
 
 
 def clean_page(raw: str) -> str:
@@ -95,11 +97,11 @@ def clean_page(raw: str) -> str:
 
 
 def strip_references(text: str) -> str:
-    """Cut ``text`` at its last references heading, if one sits late enough."""
+    """Cut ``text`` at its last references heading that a bibliography follows."""
     matches = [
         m
         for m in _REFERENCES_HEADING.finditer(text)
-        if m.start() >= _REFERENCES_MIN_POSITION * len(text)
+        if _YEAR.search(text, m.end(), m.end() + _BIBLIOGRAPHY_WINDOW)
     ]
     if not matches:
         return text

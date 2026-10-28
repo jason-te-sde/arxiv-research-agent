@@ -50,8 +50,8 @@ def test_strip_references_cuts_at_the_last_heading() -> None:
 
 def test_strip_references_accepts_numbered_and_uppercase_headings() -> None:
     body = "x " * 400
-    assert "Author" not in strip_references(f"{body}\n7 REFERENCES\n[1] Author")
-    assert "Author" not in strip_references(f"{body}\nBibliography\n[1] Author")
+    assert "Author" not in strip_references(f"{body}\n7 REFERENCES\n[1] Author. 2021.")
+    assert "Author" not in strip_references(f"{body}\nBibliography\n[1] Author (2019)")
 
 
 def test_strip_references_leaves_text_without_a_heading() -> None:
@@ -59,9 +59,16 @@ def test_strip_references_leaves_text_without_a_heading() -> None:
     assert strip_references(text) == text
 
 
-def test_strip_references_ignores_a_heading_early_in_the_paper() -> None:
-    text = "References\n" + "body " * 400
+def test_strip_references_ignores_a_heading_with_no_bibliography_after_it() -> None:
+    text = "Contents\nReferences\n" + "body " * 400
     assert strip_references(text) == text
+
+
+def test_strip_references_cuts_early_when_a_long_appendix_follows() -> None:
+    body = "body " * 100
+    appendix = "appendix " * 2000
+    text = f"{body}\nReferences\n[1] A. Author. A paper. 2020.\n{appendix}"
+    assert strip_references(text) == body.rstrip()
 
 
 def test_page_of_maps_offsets_across_a_boundary() -> None:
@@ -105,3 +112,10 @@ def test_lines_of_font_garbage_are_dropped() -> None:
 
 def test_stray_control_characters_are_removed() -> None:
     assert clean_page("a\x0cb normal text") == "ab normal text"
+
+
+def test_a_long_first_author_list_still_reads_as_a_bibliography() -> None:
+    body = "body " * 100
+    authors = ", ".join(f"Author Number{n}" for n in range(45))
+    text = f"{body}\nREFERENCES\n{authors}. Do as I can, not as I say. 2022.\n" + "x " * 2000
+    assert strip_references(text) == body.rstrip()
