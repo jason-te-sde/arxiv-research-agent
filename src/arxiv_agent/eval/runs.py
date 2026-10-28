@@ -74,6 +74,10 @@ def ollama_digests(
     return {name: installed.get(name, "not installed") for name in names}
 
 
+def unavailable_models(digests: Mapping[str, str]) -> list[str]:
+    return [name for name, digest in digests.items() if digest in ("unavailable", "not installed")]
+
+
 def ollama_unload(base_url: str, model: str, http: httpx.Client | None = None) -> bool:
     """Free a model's memory now instead of after Ollama's keep-alive.
 

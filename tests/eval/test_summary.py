@@ -83,3 +83,10 @@ def test_unload_of_an_unreachable_server_is_not_an_error() -> None:
 
     http = httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(500)))
     assert not ollama_unload("http://x", "qwen3:8b", http)
+
+
+def test_models_that_are_not_available_are_named() -> None:
+    from arxiv_agent.eval.runs import unavailable_models
+
+    digests = {"qwen3:4b": "359d7dd4bcda", "llama3.1:8b": "not installed", "x": "unavailable"}
+    assert unavailable_models(digests) == ["llama3.1:8b", "x"]

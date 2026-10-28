@@ -145,3 +145,13 @@ def test_stats_report_the_largest_prompt() -> None:
         AnswerRecord(**{**base.__dict__, "prompt_tokens": (2100, 6100)}),
     ]
     assert operational_stats(records)["max_prompt_tokens"] == 6100
+
+
+async def test_a_model_outage_stops_the_run_instead_of_being_recorded(tmp_path: Path) -> None:
+    from arxiv_agent.eval.answer_eval import EvaluationInterruptedError
+
+    agent = make_agent(tmp_path, [*grounded("one"), ConnectionError("ollama is down")])
+    out = tmp_path / "answers.jsonl"
+    with pytest.raises(EvaluationInterruptedError, match="t01"):
+        await generate_answers(agent, items(2), out)
+    assert [r.id for r in load_records(out)] == ["t00"]

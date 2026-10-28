@@ -174,22 +174,35 @@ def _dispatch_eval(args: argparse.Namespace, settings: Settings) -> int:  # prag
 def _answers(
     args: argparse.Namespace, settings: Settings, dataset: Path, items: Sequence[EvalItem]
 ) -> int:  # pragma: no cover - runs the real agent
+    from arxiv_agent.eval.answer_eval import EvaluationInterruptedError
     from arxiv_agent.eval.commands import cmd_eval_answers
-    from arxiv_agent.eval.runs import new_run_dir, ollama_digests, ollama_unload, run_meta
+    from arxiv_agent.eval.runs import (
+        new_run_dir,
+        ollama_digests,
+        ollama_unload,
+        run_meta,
+        unavailable_models,
+    )
     from arxiv_agent.runtime import Runtime
 
-    run_dir = args.resume or new_run_dir(_RUNS, f"answers-{args.question_set}")
     meta = run_meta(settings, dataset, _CORPUS) | {
         "provider": settings.provider,
         "agent_model": settings.agent_model,
         "max_iterations": settings.max_iterations,
+        "ollama_num_ctx": settings.ollama_num_ctx,
     }
     if settings.provider == "ollama":
         meta["ollama_digests"] = ollama_digests(settings.ollama_url, [settings.agent_model])
+        if missing := unavailable_models(meta["ollama_digests"]):
+            print(f"not available on {settings.ollama_url}: {', '.join(missing)}", file=sys.stderr)
+            return 1
+    run_dir = args.resume or new_run_dir(_RUNS, f"answers-{args.question_set}")
     agent = Runtime.from_settings(settings, allow_fetch=False).agent
-    meta["ollama_num_ctx"] = settings.ollama_num_ctx
     try:
         cmd_eval_answers(agent, items, run_dir, meta, sys.stdout)
+    except EvaluationInterruptedError as exc:
+        print(f"stopped: {exc}", file=sys.stderr)
+        return 1
     finally:
         if settings.provider == "ollama":
             ollama_unload(settings.ollama_url, settings.agent_model)
@@ -204,7 +217,7 @@ def _judge(run_dir: Path, settings: Settings) -> int:  # pragma: no cover - runs
     from arxiv_agent.eval import ragas_eval
     from arxiv_agent.eval.commands import cmd_eval_judge
     from arxiv_agent.eval.dataset import load_items
-    from arxiv_agent.eval.runs import ollama_digests, ollama_unload
+    from arxiv_agent.eval.runs import ollama_digests, ollama_unload, unavailable_models
     from arxiv_agent.retrieval.embeddings import make_embeddings
 
     meta = json.loads((run_dir / "meta.json").read_text())
@@ -214,6 +227,9 @@ def _judge(run_dir: Path, settings: Settings) -> int:  # pragma: no cover - runs
     judge_meta: dict[str, object] = {"judge_model": settings.judge_model}
     if settings.provider == "ollama":
         judge_meta["judge_digest"] = ollama_digests(settings.ollama_url, [settings.judge_model])
+        if missing := unavailable_models(judge_meta["judge_digest"]):  # type: ignore[arg-type]
+            print(f"not available on {settings.ollama_url}: {', '.join(missing)}", file=sys.stderr)
+            return 1
         # Only one 8B model resident at a time on a 16 GB machine.
         ollama_unload(settings.ollama_url, settings.agent_model)
 

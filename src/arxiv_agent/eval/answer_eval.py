@@ -42,6 +42,10 @@ class AnswerRecord:
         return cls(**row)
 
 
+class EvaluationInterruptedError(RuntimeError):
+    """The model failed during an evaluation run; the answer was not recorded."""
+
+
 def load_records(path: Path) -> list[AnswerRecord]:
     if not path.exists():
         return []
@@ -54,7 +58,8 @@ async def generate_answers(
     """Answer every item, appending each record to ``out`` as it finishes.
 
     Items already in ``out`` are kept and not asked again, so an interrupted
-    run resumes where it stopped.
+    run resumes where it stopped. A model failure stops the run without
+    recording that item.
     """
     records = {r.id: r for r in load_records(out)}
     for item in items:
@@ -70,6 +75,11 @@ async def generate_answers(
                 final = event
         if final is None:  # pragma: no cover - ResearchAgent always ends with a Final
             raise RuntimeError(f"{item.id}: the agent ended without a final event")
+        if final.reason == "model_error":
+            # An outage or a crash is not a measurement: stop, and let --resume ask again.
+            raise EvaluationInterruptedError(
+                f"{item.id}: the model failed (see the log); rerun with --resume"
+            )
         record = AnswerRecord(
             id=item.id,
             question=item.question,
