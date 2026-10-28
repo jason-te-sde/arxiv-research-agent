@@ -1,10 +1,13 @@
 """Token-bounded recursive chunking.
 
 Lengths are counted with the embedding model's own tokenizer, and the budget
-covers everything the embedder sees: the title prefix, the chunk body and the
-model's special tokens. all-MiniLM-L6-v2 reads at most 256 tokens; anything
-past that is silently truncated, so a chunk that overflows the budget has an
-end that dense retrieval never sees.
+covers the whole model input: the title prefix, the chunk body and the special
+tokens. all-MiniLM-L6-v2 embeds only the first 256 tokens of its input, while
+the cross-encoder reads up to 512. The default budget is 512: on the dev set,
+512-token chunks retrieved better than 256-token chunks in both the dense and
+the two-stage pipeline (docs/evaluation.md), so dense retrieval matching on a
+chunk's first half and the reranker reading all of it is the configuration
+this project uses.
 """
 
 from __future__ import annotations

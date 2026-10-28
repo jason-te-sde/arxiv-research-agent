@@ -12,6 +12,8 @@ def test_defaults() -> None:
     assert s.pdf_dir == Path("data/pdfs")
     assert s.embed_model == "sentence-transformers/all-MiniLM-L6-v2"
     assert s.rerank_model == "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    # Chosen on the dev set (docs/evaluation.md, chunk-size ablation).
+    assert (s.chunk_size, s.chunk_overlap) == (512, 64)
     assert s.provider == "ollama"
     assert s.agent_model == "qwen3:8b"
     assert s.judge_model == "llama3.1:8b"
@@ -22,8 +24,8 @@ def test_defaults() -> None:
 
 
 def test_env_override() -> None:
-    s = Settings.from_env({"ARXIV_AGENT_CHUNK_SIZE": "512", "ARXIV_AGENT_CHUNK_OVERLAP": "64"})
-    assert (s.chunk_size, s.chunk_overlap) == (512, 64)
+    s = Settings.from_env({"ARXIV_AGENT_CHUNK_SIZE": "256", "ARXIV_AGENT_CHUNK_OVERLAP": "32"})
+    assert (s.chunk_size, s.chunk_overlap) == (256, 32)
 
 
 def test_data_dir_moves_derived_paths() -> None:
