@@ -17,6 +17,12 @@ def test_ollama_agent_model_is_deterministic_and_does_not_think() -> None:
     assert model.num_ctx == Settings.from_env({}).ollama_num_ctx
 
 
+def test_ollama_calls_time_out_instead_of_hanging() -> None:
+    model = make_chat_model(Settings.from_env({}), "agent")
+    assert isinstance(model, ChatOllama)
+    assert (model.client_kwargs or {}).get("timeout") == 600
+
+
 def test_ollama_judge_uses_the_judge_model() -> None:
     model = make_chat_model(Settings.from_env({}), "judge")
     assert isinstance(model, ChatOllama)

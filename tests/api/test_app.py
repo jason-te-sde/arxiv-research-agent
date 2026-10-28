@@ -219,3 +219,23 @@ def test_an_evaluation_runtime_cannot_fetch_papers(tmp_path: Path) -> None:
     settings = Settings.from_env({"ARXIV_AGENT_DATA_DIR": str(tmp_path)})
     runtime = Runtime.from_settings(settings, runs_dir=tmp_path / "runs", allow_fetch=False)
     assert runtime.ingestor is None
+
+
+def test_model_down_streams_a_fallback_answer_not_an_error(tmp_path: Path) -> None:
+    runtime, _ = make_runtime(tmp_path, [ConnectionError("ollama is not running")])
+    response = TestClient(create_app(runtime)).post("/query", json={"question": "react"})
+    events = parse_sse(response.text)
+    assert [name for name, _ in events] == ["final"]
+    assert events[0][1]["fallback"] is True
+    assert events[0][1]["reason"] == "model_error"
+
+
+@pytest.mark.parametrize("session_id", ["会话-1", "a b", "x" * 129])
+def test_session_ids_outside_the_safe_alphabet_are_rejected(
+    tmp_path: Path, session_id: str
+) -> None:
+    runtime, _ = make_runtime(tmp_path, [])
+    response = TestClient(create_app(runtime)).post(
+        "/query", json={"question": "q", "session_id": session_id}
+    )
+    assert response.status_code == 422

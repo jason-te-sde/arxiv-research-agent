@@ -12,6 +12,9 @@ from arxiv_agent.config import Settings
 
 Role = Literal["agent", "judge"]
 
+# A hung Ollama would otherwise hang /query forever. Generous: a long prompt on a
+# CPU-bound laptop model can take minutes to evaluate.
+_OLLAMA_TIMEOUT_S = 600
 _ANTHROPIC_MAX_TOKENS = 16000
 # On a safety decline the API reruns the request on a fallback model it picks.
 _ANTHROPIC_FALLBACK_BETA = "server-side-fallback-2026-07-01"
@@ -30,6 +33,7 @@ def make_chat_model(settings: Settings, role: Role) -> BaseChatModel:
             seed=0,
             # Reserved up front as KV cache, so it is sized from measured prompts.
             num_ctx=settings.ollama_num_ctx,
+            client_kwargs={"timeout": _OLLAMA_TIMEOUT_S},
         )
     # No temperature, top_p or top_k: current Claude models reject them with a 400.
     return ChatAnthropic(  # type: ignore[call-arg]

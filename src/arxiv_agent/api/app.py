@@ -33,7 +33,8 @@ _KEEPALIVE_SECONDS = 15
 
 class QueryRequest(BaseModel):
     question: str = Field(max_length=4000)
-    session_id: str | None = Field(default=None, max_length=128)
+    # It is echoed in a response header, which must stay ASCII.
+    session_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,128}$")
 
     @field_validator("question")
     @classmethod
