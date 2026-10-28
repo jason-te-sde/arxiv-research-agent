@@ -195,3 +195,47 @@ async def test_fetch_without_network_access_is_disabled(store: PaperStore) -> No
 def test_descriptions_carry_no_source_indentation(store: PaperStore) -> None:
     for t in build_tools(context(store)):
         assert "\n " not in t.description, t.name
+
+
+async def test_search_accepts_a_chunk_id_as_the_paper(store: PaperStore) -> None:
+    out = await tool(context(store), "search_papers").ainvoke(
+        {"query": "results", "arxiv_id": f"{REACT}#1"}
+    )
+    assert f"[{REACT}#" in out
+
+
+async def test_another_version_of_a_stored_paper_resolves_to_the_stored_one(
+    store: PaperStore,
+) -> None:
+    out = await tool(context(store), "search_papers").ainvoke(
+        {"query": "results", "arxiv_id": "2210.03629v1"}
+    )
+    assert f"[{REACT}#" in out
+
+
+async def test_a_title_is_not_mistaken_for_a_missing_paper(store: PaperStore) -> None:
+    out = await tool(context(store), "search_papers").ainvoke(
+        {"query": "results", "arxiv_id": "ReAct"}
+    )
+    assert "not an arXiv id" in out
+    assert "fetch_paper" not in out
+
+
+async def test_an_uploaded_paper_resolves_by_its_local_id(tmp_path: Path) -> None:
+    s = PaperStore(tmp_path / "c", HashingEmbeddings(), "local")
+    s.replace_paper([chunk("local-0123456789ab", 0, "my notes on agents", title="Notes")])
+    out = await tool(context(s), "search_papers").ainvoke(
+        {"query": "agents", "arxiv_id": "local-0123456789ab"}
+    )
+    assert "[local-0123456789ab#0]" in out
+
+
+async def test_fetch_of_another_version_does_not_duplicate_the_paper(
+    store: PaperStore, tmp_path: Path
+) -> None:
+    calls: list[str] = []
+    out = await tool(fetching(store, tmp_path, calls), "fetch_paper").ainvoke(
+        {"arxiv_id": "2210.03629v1"}
+    )
+    assert "already ingested" in out
+    assert calls == []

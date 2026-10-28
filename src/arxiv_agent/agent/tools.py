@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
@@ -35,6 +36,7 @@ _SUMMARY_OPENING = 3
 _SUMMARY_CHUNKS = 8
 _COMPARE_PER_PAPER = 3
 _COMPARE_MAX_PAPERS = 4
+_LOCAL_ID = re.compile(r"local-[0-9a-f]{12}")
 
 
 @dataclass
@@ -56,15 +58,20 @@ class ToolContext:
                 self.contexts.append(c.embed_text)
 
     def resolve(self, raw: str) -> str | None:
-        """The stored id for ``raw`` (versioned or not), or None if it is not ingested."""
-        try:
-            wanted = normalize_arxiv_id(raw)
-        except ValueError:
-            wanted = raw.strip()
-        stored = [p.arxiv_id for p in self.store.papers()]
-        if wanted in stored:
-            return wanted
-        return next((s for s in stored if base_id(s) == wanted), None)
+        """The stored id for ``raw``, or None if that paper is not ingested.
+
+        Accepts what a model is likely to pass: a bare or versioned arXiv id, a
+        chunk id (``2210.03629v3#12``), another version of a stored paper (which
+        resolves to the stored one), or an upload id. Raises ValueError when
+        ``raw`` is not a paper id at all, such as a title.
+        """
+        candidate = re.sub(r"#\d+$", "", raw.strip())
+        if not _LOCAL_ID.fullmatch(candidate):
+            candidate = normalize_arxiv_id(candidate)
+        if self.store.has_paper(candidate):
+            return candidate
+        base = base_id(candidate)
+        return next((p.arxiv_id for p in self.store.papers() if base_id(p.arxiv_id) == base), None)
 
 
 def format_hits(hits: Sequence[Hit]) -> str:
@@ -79,7 +86,22 @@ def _not_ingested(arxiv_id: str) -> str:
     return f"Paper {arxiv_id} is not ingested. Call fetch_paper with this arxiv_id to add it."
 
 
+def _not_an_id(raw: str) -> str:
+    return (
+        f"{raw!r} is not an arXiv id. Use an id from the paper list, such as 2210.03629v3, "
+        "or call search_papers without arxiv_id."
+    )
+
+
 def build_tools(ctx: ToolContext) -> list[BaseTool]:
+    async def lookup(raw: str) -> tuple[str | None, str]:
+        """(stored id, "") or (None, the message to give the model instead)."""
+        try:
+            stored = await asyncio.to_thread(ctx.resolve, raw)
+        except ValueError:
+            return None, _not_an_id(raw)
+        return (stored, "") if stored else (None, _not_ingested(raw))
+
     async def search_papers(query: str, arxiv_id: str | None = None) -> str:
         """Search the ingested papers for passages relevant to a query.
 
@@ -87,9 +109,9 @@ def build_tools(ctx: ToolContext) -> list[BaseTool]:
         """
         paper: str | None = None
         if arxiv_id:
-            paper = ctx.resolve(arxiv_id)
+            paper, problem = await lookup(arxiv_id)
             if paper is None:
-                return _not_ingested(arxiv_id)
+                return problem
         hits = await asyncio.to_thread(ctx.retriever.search, query, paper)
         if not hits:
             return "No passages found."
@@ -98,9 +120,9 @@ def build_tools(ctx: ToolContext) -> list[BaseTool]:
 
     async def summarize_paper(arxiv_id: str) -> str:
         """Summarize one ingested paper: problem, method, results and limitations."""
-        paper = ctx.resolve(arxiv_id)
+        paper, problem = await lookup(arxiv_id)
         if paper is None:
-            return _not_ingested(arxiv_id)
+            return problem
         chunks = await asyncio.to_thread(ctx.store.chunks_for, paper)
         hits = await asyncio.to_thread(
             ctx.retriever.search, "main results, contributions and limitations", paper
@@ -128,10 +150,12 @@ def build_tools(ctx: ToolContext) -> list[BaseTool]:
         if not arxiv_id and not query:
             return "fetch_paper needs an arxiv_id or a query."
         if arxiv_id:
-            stored = ctx.resolve(arxiv_id)
+            try:
+                stored = await asyncio.to_thread(ctx.resolve, arxiv_id)
+            except ValueError:
+                return _not_an_id(arxiv_id)
             if stored is not None:
-                title = next(p.title for p in ctx.store.papers() if p.arxiv_id == stored)
-                return f"{stored} ({title}) is already ingested; use search_papers on it."
+                return f"{stored} is already ingested; use search_papers on it."
             return await _ingest(ctx.ingestor, arxiv_id)
         client = ctx.client
         try:
@@ -141,7 +165,8 @@ def build_tools(ctx: ToolContext) -> list[BaseTool]:
         if not found:
             return f"arXiv has no results for {query!r}."
         listing = "\n".join(f"- {m.arxiv_id}: {m.title} ({m.published})" for m in found)
-        new = next((m for m in found if ctx.resolve(m.arxiv_id) is None), None)
+        stored = {base_id(p.arxiv_id) for p in await asyncio.to_thread(ctx.store.papers)}
+        new = next((m for m in found if base_id(m.arxiv_id) not in stored), None)
         if new is None:
             return f"Every match is already ingested:\n{listing}"
         return f"{await _ingest(ctx.ingestor, new.arxiv_id)}\n\narXiv matches:\n{listing}"
@@ -152,10 +177,12 @@ def build_tools(ctx: ToolContext) -> list[BaseTool]:
             return "compare_papers needs at least two arxiv_ids."
         if len(arxiv_ids) > _COMPARE_MAX_PAPERS:
             return f"compare_papers takes at most {_COMPARE_MAX_PAPERS} papers."
-        resolved = {raw: ctx.resolve(raw) for raw in arxiv_ids}
-        missing = [raw for raw, stored in resolved.items() if stored is None]
-        if missing:
-            return " ".join(_not_ingested(m) for m in missing)
+        resolved: dict[str, str] = {}
+        for raw in arxiv_ids:
+            stored, problem = await lookup(raw)
+            if stored is None:
+                return problem
+            resolved[raw] = stored
         sections = []
         for stored in resolved.values():
             hits = await asyncio.to_thread(ctx.retriever.search, aspect, stored)
