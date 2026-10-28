@@ -2,9 +2,10 @@
 
 Text comes out of ``pypdf`` one layout line at a time. Cleaning turns those
 lines back into paragraphs (so the splitter can prefer paragraph boundaries),
-undoes line-break hyphenation and ligatures, drops the arXiv side stamp and bare page
-numbers, and cuts the reference list, which otherwise floods retrieval with
-author names and titles that match almost any query.
+undoes line-break hyphenation and ligatures, drops the arXiv side stamp, bare
+page numbers and lines of figure-font garbage, and cuts the reference list,
+which otherwise floods retrieval with author names and titles that match
+almost any query.
 """
 
 from __future__ import annotations
@@ -44,6 +45,10 @@ _REFERENCES_HEADING = re.compile(
     re.MULTILINE,
 )
 _SENTENCE_END = (".", "?", "!", ":")
+_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+# Figures typeset with subset fonts often extract as shifted letters separated
+# by control bytes; a line with this many of them is not prose.
+_GARBAGE_CONTROLS = 3
 # A line shorter than this fraction of the page's median line ends its paragraph
 # when it also ends a sentence: it is the ragged last line of that paragraph.
 _SHORT_LINE = 0.75
@@ -54,7 +59,12 @@ _REFERENCES_MIN_POSITION = 0.3
 
 def clean_page(raw: str) -> str:
     # NFKC folds ligatures (U+FB01 'fi') that PDF fonts emit as one glyph.
-    lines = [ln.strip() for ln in unicodedata.normalize("NFKC", raw).splitlines()]
+    lines = [
+        _CONTROL.sub("", ln).strip()
+        # split on "\n" only: splitlines() also breaks on form feeds and other controls
+        for ln in unicodedata.normalize("NFKC", raw).split("\n")
+        if len(_CONTROL.findall(ln)) < _GARBAGE_CONTROLS
+    ]
     lines = [ln for ln in lines if not _ARXIV_STAMP.match(ln) and not _PAGE_NUMBER.match(ln)]
     lengths = [len(ln) for ln in lines if ln]
     if not lengths:

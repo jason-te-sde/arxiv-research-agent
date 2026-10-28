@@ -96,3 +96,12 @@ def test_unreadable_file_raises_extraction_error(tmp_path: Path) -> None:
 
 def test_ligatures_are_normalized() -> None:
     assert clean_page("task-speciﬁc actions") == "task-specific actions"
+
+
+def test_lines_of_font_garbage_are_dropped() -> None:
+    garbage = "$FW\x03\x19 \x03*R\x03WR\x03FRXQWHUWRS\x03\x16"
+    assert clean_page(f"{LONG}\n{garbage}\n{LONG}") == f"{LONG} {LONG}"
+
+
+def test_stray_control_characters_are_removed() -> None:
+    assert clean_page("a\x0cb normal text") == "ab normal text"
