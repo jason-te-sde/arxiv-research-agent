@@ -165,8 +165,8 @@ def build_tools(ctx: ToolContext) -> list[BaseTool]:
         if not found:
             return f"arXiv has no results for {query!r}."
         listing = "\n".join(f"- {m.arxiv_id}: {m.title} ({m.published})" for m in found)
-        stored = {base_id(p.arxiv_id) for p in await asyncio.to_thread(ctx.store.papers)}
-        new = next((m for m in found if base_id(m.arxiv_id) not in stored), None)
+        stored_bases = {base_id(p.arxiv_id) for p in await asyncio.to_thread(ctx.store.papers)}
+        new = next((m for m in found if base_id(m.arxiv_id) not in stored_bases), None)
         if new is None:
             return f"Every match is already ingested:\n{listing}"
         return f"{await _ingest(ctx.ingestor, new.arxiv_id)}\n\narXiv matches:\n{listing}"
