@@ -155,3 +155,12 @@ async def test_a_model_outage_stops_the_run_instead_of_being_recorded(tmp_path: 
     with pytest.raises(EvaluationInterruptedError, match="t01"):
         await generate_answers(agent, items(2), out)
     assert [r.id for r in load_records(out)] == ["t00"]
+
+
+def test_stats_count_answers_that_carry_model_reasoning() -> None:
+    from arxiv_agent.eval.answer_eval import operational_stats
+
+    base = AnswerRecord("t", "q", "a", (), (), (), (), False, None, 2, 1.0)
+    answers = ["Okay, let me think.\n</think>\n\nIt does [x#1].", "<think>hm", "It does [x#1]."]
+    records = [AnswerRecord(**{**base.__dict__, "answer": a}) for a in answers]
+    assert operational_stats(records)["think_tags"] == 2

@@ -47,7 +47,7 @@ check-dataset` confirms every quote occurs in its paper and in a stored chunk.
 
 ```bash
 uv sync --extra eval
-ollama pull qwen3:4b && ollama pull llama3.1:8b
+ollama pull qwen3:4b-instruct-2507-q4_K_M && ollama pull llama3.1:8b
 arxiv-agent ingest --corpus corpus/agent-papers.toml
 arxiv-agent eval check-dataset --set test
 arxiv-agent eval retrieval --set test            # MRR@5, Hit@5, Recall@5, dense and two-stage

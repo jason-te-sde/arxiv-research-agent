@@ -66,7 +66,7 @@ Needs Python 3.11+, [uv](https://docs.astral.sh/uv/) and
 
 ```bash
 uv sync
-ollama pull qwen3:4b
+ollama pull qwen3:4b-instruct-2507-q4_K_M
 uv run arxiv-agent ingest --corpus corpus/agent-papers.toml
 uv run arxiv-agent ask "How does Reflexion turn failures into feedback?"
 uv run arxiv-agent serve        # http://127.0.0.1:8000

@@ -15,7 +15,9 @@ def test_defaults() -> None:
     # Chosen on the dev set (docs/evaluation.md, chunk-size ablation).
     assert (s.chunk_size, s.chunk_overlap) == (512, 64)
     assert s.provider == "ollama"
-    assert s.agent_model == "qwen3:4b"  # the user chose it over qwen3:8b to save memory
+    # A 4B model to save memory (the user chose it over 8B), in the instruct build:
+    # the bare qwen3:4b tag is a build that always thinks (docs/evaluation.md).
+    assert s.agent_model == "qwen3:4b-instruct-2507-q4_K_M"
     assert s.judge_model == "llama3.1:8b"
     assert s.ollama_url == "http://localhost:11434"
     assert s.max_iterations == 3

@@ -12,7 +12,7 @@ def test_ollama_agent_samples_as_qwen_recommends_with_a_fixed_seed() -> None:
     # top_k 20, and warns that greedy decoding causes endless repetitions.
     model = make_chat_model(Settings.from_env({}), "agent")
     assert isinstance(model, ChatOllama)
-    assert model.model == "qwen3:4b"
+    assert model.model == "qwen3:4b-instruct-2507-q4_K_M"
     assert model.reasoning is False
     assert (model.temperature, model.top_p, model.top_k) == (0.7, 0.8, 20)
     assert model.seed == 0

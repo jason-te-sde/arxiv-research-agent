@@ -117,4 +117,6 @@ def operational_stats(records: Sequence[AnswerRecord]) -> dict[str, Any]:
         "cited_rate": round(sum(1 for r in records if r.citations) / n, 4),
         "unverified_citations": sum(len(r.unverified_citations) for r in records),
         "max_prompt_tokens": max((t for r in records for t in r.prompt_tokens), default=0),
+        # A thinking model whose reasoning reached the answer text (docs/evaluation.md).
+        "think_tags": sum(1 for r in records if "<think>" in r.answer or "</think>" in r.answer),
     }

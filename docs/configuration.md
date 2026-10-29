@@ -6,7 +6,7 @@ Everything is set through environment variables; nothing is read from files.
 | --- | --- | --- |
 | `ARXIV_AGENT_DATA_DIR` | `data` | PDFs (`pdfs/`) and the Chroma index (`chroma/`) |
 | `ARXIV_AGENT_PROVIDER` | `ollama` | `ollama` or `anthropic` |
-| `ARXIV_AGENT_AGENT_MODEL` | `qwen3:4b` / `claude-opus-5-5` | model that runs the agent |
+| `ARXIV_AGENT_AGENT_MODEL` | `qwen3:4b-instruct-2507-q4_K_M` / `claude-opus-5-5` | model that runs the agent |
 | `ARXIV_AGENT_JUDGE_MODEL` | `llama3.1:8b` / `claude-opus-5-5` | RAGAS judge |
 | `ARXIV_AGENT_OLLAMA_URL` | `http://localhost:11434` | Ollama server |
 | `ARXIV_AGENT_OLLAMA_NUM_CTX` | `16384` | Ollama context window in tokens; reserved up front as KV cache, so it sets memory use |

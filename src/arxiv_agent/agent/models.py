@@ -25,7 +25,7 @@ _ANTHROPIC_FALLBACK_BETA = "server-side-fallback-2026-07-01"
 def make_chat_model(settings: Settings, role: Role) -> BaseChatModel:
     name = settings.agent_model if role == "agent" else settings.judge_model
     if settings.provider == "ollama":
-        # The agent samples as Qwen3's model card prescribes for non-thinking mode;
+        # The agent samples as the Qwen3 instruct model card prescribes;
         # greedy decoding sent it into a repetition loop that ran for hours. The
         # judge decodes greedily for stable scores. A fixed seed keeps both
         # repeatable on one machine, and the output cap ends any loop.
@@ -33,7 +33,9 @@ def make_chat_model(settings: Settings, role: Role) -> BaseChatModel:
         return ChatOllama(
             model=name,
             base_url=settings.ollama_url,
-            reasoning=False,  # the ReAct loop is the reasoning; thinking costs minutes
+            # The ReAct loop is the reasoning, and thinking costs minutes. Hybrid builds
+            # honor this; the default instruct build never thinks.
+            reasoning=False,
             seed=0,
             num_predict=_OLLAMA_MAX_OUTPUT_TOKENS,
             # Reserved up front as KV cache, so it is sized from measured prompts.
