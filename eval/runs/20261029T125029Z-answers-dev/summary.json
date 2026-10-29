@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "version": "0.1.0.dev0",
+    "git_sha": "99e3e306ee07bfe0027cee118136175bfed01549",
+    "git_dirty": false,
+    "dataset": "dev.jsonl",
+    "dataset_sha256": "2a8b49175f92024bac38a14980c53f3d6ccb8754e3f007fbdb930ddef7d3439d",
+    "corpus_sha256": "47b39e2678ddcb9204d75d2bbfc1f6fef904a428ea482dbee6e0c2e4853aa9e4",
+    "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "chunk_size": 512,
+    "chunk_overlap": 64,
+    "k_candidates": 20,
+    "k_final": 5,
+    "started_at": "2026-10-29T12:50:29Z",
+    "provider": "ollama",
+    "agent_model": "qwen3:4b-instruct-2507-q4_K_M",
+    "max_iterations": 3,
+    "ollama_num_ctx": 16384,
+    "ollama_digests": {
+      "qwen3:4b-instruct-2507-q4_K_M": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0"
+    },
+    "judge_model": "llama3.1:8b",
+    "judge_digest": {
+      "llama3.1:8b": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e"
+    },
+    "judged_at": "2026-10-29T13:34:42Z"
+  },
+  "ragas": {
+    "n": 10,
+    "mean": {
+      "context_precision": 0.9129,
+      "context_recall": 0.8333,
+      "faithfulness": 0.8792,
+      "answer_relevancy": 0.7747
+    },
+    "unscored": {
+      "context_precision": 0,
+      "context_recall": 0,
+      "faithfulness": 0,
+      "answer_relevancy": 0
+    }
+  },
+  "operations": {
+    "n": 10,
+    "fallback_rate": 0.0,
+    "fallback_reasons": {},
+    "mean_iterations": 3.0,
+    "latency_p50_s": 40.06,
+    "latency_p95_s": 69.64,
+    "cited_rate": 1.0,
+    "unverified_citations": 0,
+    "max_prompt_tokens": 5333,
+    "think_tags": 0
+  },
+  "items": [
+    {
+      "id": "A02",
+      "question": "Which four design questions must a specific instantiation of the Tree of Thoughts framework answer?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 40.912,
+      "citations": 1,
+      "scores": {
+        "context_precision": 0.32499999998375,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.407761618732191
+      }
+    },
+    {
+      "id": "A07",
+      "question": "How do ReAct and ReWOO differ in the way they combine LLM reasoning with tool results, and what advantage does ReWOO claim from this difference?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 39.679,
+      "citations": 3,
+      "scores": {
+        "context_precision": 0.99999999999,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9110019774164972
+      }
+    },
+    {
+      "id": "B01",
+      "question": "When a language model annotates text with candidate API calls for self-training, what makes a candidate call count as helpful enough to keep?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 24.994,
+      "citations": 1,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.628430815060024
+      }
+    },
+    {
+      "id": "B08",
+      "question": "Why can Toolformer not use one tool's output as another tool's input, and how does LLMCompiler make such dependent function calls possible?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 40.435,
+      "citations": 1,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 0.5,
+        "faithfulness": 0.6666666666666666,
+        "answer_relevancy": 0.5986020324639697
+      }
+    },
+    {
+      "id": "B09",
+      "question": "On M3ToolEval, by how many percentage points does CodeAct improve the success rate of gpt-4-1106-preview over the next best action format?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 37.807,
+      "citations": 1,
+      "scores": {
+        "context_precision": 0.8041666666465626,
+        "context_recall": 1.0,
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.8393261759677498
+      }
+    },
+    {
+      "id": "C06",
+      "question": "In an approach where a single LLM critiques and rewrites its own output over several rounds, how does the specificity of the self-generated feedback affect results compared with generic feedback?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 70.922,
+      "citations": 1,
+      "scores": {
+        "context_precision": 0.999999999975,
+        "context_recall": 1.0,
+        "faithfulness": 0.875,
+        "answer_relevancy": 0.7640860766517696
+      }
+    },
+    {
+      "id": "D01",
+      "question": "In the RAG paper, how do the RAG-Sequence and RAG-Token models differ in the way they use retrieved documents when generating a target sequence?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 68.081,
+      "citations": 3,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 0.6666666666666666,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9563827309870362
+      }
+    },
+    {
+      "id": "D02",
+      "question": "How does SWE-agent keep an agent from compounding mistakes when it edits a file, and what happens to an edit that introduces errors?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 42.888,
+      "citations": 2,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 0.5,
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.9509349543187091
+      }
+    },
+    {
+      "id": "D04",
+      "question": "In a retrieval system that builds a tree by recursively clustering and summarizing text chunks, why are chunks assigned to clusters with soft clustering instead of a single fixed cluster?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 31.154,
+      "citations": 1,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 0.6666666666666666,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6983060774230122
+      }
+    },
+    {
+      "id": "D09",
+      "question": "In the WebArena error analysis, what percentage of feasible tasks does GPT-4 erroneously identify as impossible?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 21.428,
+      "citations": 1,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9920071344527526
+      }
+    }
+  ]
+}
