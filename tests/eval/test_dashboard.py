@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from arxiv_agent.eval.dashboard import render_dashboard
+from arxiv_agent.eval.stats import bootstrap_ci
 
 
 def retrieval_run(root: Path, name: str, mrr_dense: float, mrr_two: float) -> Path:
@@ -143,3 +144,38 @@ def test_answer_headline_prefers_the_test_set_over_a_newer_dev_run(tmp_path: Pat
 def test_the_calls_statistic_says_what_it_counts(tmp_path: Path) -> None:
     html = render_dashboard([answer_run(tmp_path, "q")])
     assert "agent calls per question" in html
+
+
+def with_ranks(run: Path, dense: list[int | None], two_stage: list[int | None]) -> Path:
+    data = json.loads((run / "retrieval.json").read_text())
+    for mode, ranks in (("dense", dense), ("two-stage", two_stage)):
+        data["modes"][mode]["items"] = [{"id": f"t{i}", "rank": r} for i, r in enumerate(ranks)]
+    (run / "retrieval.json").write_text(json.dumps(data))
+    return run
+
+
+def test_the_reranking_gain_has_a_paired_interval(tmp_path: Path) -> None:
+    run = retrieval_run(tmp_path, "20261028T200000Z-retrieval-test", 0.5, 1.0)
+    html = render_dashboard([with_ranks(run, [None, None, 1, 1], [1, 1, 1, 1])])
+    low, high = bootstrap_ci([1.0, 1.0, 0.0, 0.0])
+    section = html.split('id="retrieval"')[1].split("</section>")[0]
+    assert "+0.500" in section
+    assert f"{low:+.3f} to {high:+.3f}" in section
+    assert "4 questions" in section
+
+
+def test_ragas_means_have_intervals_over_the_scored_questions(tmp_path: Path) -> None:
+    run = answer_run(tmp_path, "q")
+    summary = json.loads((run / "summary.json").read_text())
+    item = summary["items"][0]
+    summary["items"] = [
+        {**item, "id": f"t{i}", "scores": {**item["scores"], "context_precision": v}}
+        for i, v in enumerate([1.0, 0.5, None])
+    ]
+    (run / "summary.json").write_text(json.dumps(summary))
+    html = render_dashboard([run])
+    low, high = bootstrap_ci([1.0, 0.5])
+    section = html.split('id="answers"')[1].split("</section>")[0]
+    assert f"{low:.3f} to {high:.3f}" in section
+    assert "2 of 3" in section  # context_precision: one question unscored
+    assert "0 of 3" in section  # faithfulness: unscored everywhere, so no interval

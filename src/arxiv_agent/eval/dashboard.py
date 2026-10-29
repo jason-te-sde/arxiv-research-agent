@@ -1,8 +1,10 @@
 """A self-contained HTML page over the evaluation runs in ``eval/runs/``.
 
 Retrieval runs (``retrieval.json``) and answer runs (``summary.json``) are read
-as written; nothing is recomputed here. The page has no scripts: bars are
-inline SVG with native hover titles, and every number is also in a table.
+as written. The one thing computed here is how far each headline can be
+trusted: a 95% bootstrap interval from the per-question values in the same
+files. The page has no scripts: bars are inline SVG with native hover titles,
+and every number is also in a table.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from arxiv_agent.eval.ragas_eval import METRICS
+from arxiv_agent.eval.stats import bootstrap_ci
 
 _RETRIEVAL_METRICS = (("mrr", "MRR@5"), ("hit_rate", "Hit@5"), ("recall", "Recall@5"))
 _MODES = (("dense", "var(--series-1)"), ("two-stage", "var(--series-2)"))
@@ -109,6 +112,27 @@ def _bars(rows: Sequence[tuple[str, Sequence[tuple[str, float | None, str]]]]) -
     return "".join(parts)
 
 
+def _gain_note(modes: Mapping[str, Any]) -> str:
+    """Two-stage minus dense MRR@5, with an interval paired by question."""
+    if "dense" not in modes or "two-stage" not in modes:
+        return ""
+    rr = [
+        {item["id"]: 1 / item["rank"] if item["rank"] else 0.0 for item in modes[m]["items"]}
+        for m in ("dense", "two-stage")
+    ]
+    ids = sorted(rr[0].keys() & rr[1].keys())
+    if not ids:
+        return ""
+    # The gain and its interval come from the same differences, so they cannot disagree.
+    diffs = [rr[1][i] - rr[0][i] for i in ids]
+    low, high = bootstrap_ci(diffs)
+    return (
+        f'<p class="note">Two-stage minus dense, MRR@5: <b>{sum(diffs) / len(diffs):+.3f}</b> '
+        f"(95% interval {low:+.3f} to {high:+.3f}, paired bootstrap over "
+        f"{len(ids)} question{'s' if len(ids) != 1 else ''}).</p>"
+    )
+
+
 def _retrieval_section(runs: Sequence[tuple[str, dict[str, Any]]]) -> str:
     latest: dict[str, tuple[str, dict[str, Any]]] = {}
     for name, data in runs:  # sorted by name, which starts with a timestamp
@@ -133,6 +157,7 @@ def _retrieval_section(runs: Sequence[tuple[str, dict[str, Any]]]) -> str:
             )
             + "</div>"
             + _bars(rows)
+            + _gain_note(modes)
             + f'<p class="note">Run {_esc(name)}, chunks {_esc(meta.get("chunk_size"))}/'
             f"{_esc(meta.get('chunk_overlap'))}, commit {_esc(str(meta.get('git_sha'))[:7])}. "
             "Relevance is judged by evidence quotes, without a model.</p>"
@@ -155,6 +180,15 @@ def _answers_section(runs: Sequence[tuple[str, dict[str, Any]]]) -> str:
         (f"{ops['latency_p50_s']:.0f} s", "median latency"),
         (f"{ops['cited_rate']:.0%}", "answers with a verified citation"),
     ]
+    intervals = ""
+    for m in METRICS:
+        scored = [s for item in data["items"] if (s := item["scores"].get(m)) is not None]
+        span = "{:.3f} to {:.3f}".format(*bootstrap_ci(scored)) if scored else "-"
+        intervals += (
+            f'<tr><td>{_esc(m)}</td><td class="num">{_fmt(ragas["mean"].get(m))}</td>'
+            f'<td class="num">{span}</td>'
+            f'<td class="num">{len(scored)} of {len(data["items"])}</td></tr>'
+        )
     head = "".join(f'<th class="num">{_esc(m)}</th>' for m in METRICS)
     body = "".join(
         "<tr>"
@@ -171,6 +205,9 @@ def _answers_section(runs: Sequence[tuple[str, dict[str, Any]]]) -> str:
         '<section id="answers">'
         f"<h2>Answers, {_esc(meta.get('dataset'))} ({ragas['n']} questions)</h2>"
         + _bars(rows)
+        + "<table><thead><tr><th>metric</th>"
+        '<th class="num">mean</th><th class="num">95% interval</th>'
+        f'<th class="num">scored</th></tr></thead><tbody>{intervals}</tbody></table>'
         + f'<p class="note">RAGAS means over scored questions; unscored by the judge: '
         f"{_esc(unscored)}. Agent {_esc(meta.get('agent_model'))}, judge "
         f"{_esc(meta.get('judge_model'))}, run {_esc(name)}, commit "
