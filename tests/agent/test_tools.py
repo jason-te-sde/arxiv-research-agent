@@ -4,7 +4,7 @@ import httpx
 import pytest
 from langchain_core.tools import BaseTool
 
-from arxiv_agent.agent.tools import ToolContext, build_tools, format_hits
+from arxiv_agent.agent.tools import ToolContext, _merge, build_tools, format_hits
 from arxiv_agent.ingest.arxiv_client import ArxivClient
 from arxiv_agent.ingest.pipeline import Ingestor
 from arxiv_agent.retrieval.hits import Hit
@@ -111,6 +111,38 @@ async def test_search_in_a_paper_that_is_not_ingested_says_so(store: PaperStore)
     assert "fetch_paper" in out
 
 
+def test_merge_keeps_the_best_of_both_lists_once_each() -> None:
+    best, low = Hit(chunk(REACT, 0, "a"), 0.9), Hit(chunk(REACT, 1, "b"), 0.2)
+    middle = Hit(chunk(REFLEXION, 0, "c"), 0.5)
+    merged = _merge([best, low], [middle, best])
+    assert [h.chunk.id for h in merged] == [f"{REACT}#0", f"{REFLEXION}#0"]
+
+
+def test_merge_puts_the_favored_paper_first_on_equal_scores() -> None:
+    favored, other = Hit(chunk(REACT, 0, "a"), 0.5), Hit(chunk(REFLEXION, 0, "b"), 0.5)
+    assert _merge([favored], [other]) == [favored]
+
+
+class SplitRetriever:
+    """Returns one list for a search inside a paper and another for the library."""
+
+    def __init__(self, inside: list[Hit], everywhere: list[Hit]) -> None:
+        self.inside, self.everywhere = inside, everywhere
+
+    def search(self, query: str, arxiv_id: str | None = None) -> list[Hit]:
+        return list(self.inside if arxiv_id else self.everywhere)
+
+
+async def test_a_named_paper_passage_the_library_search_missed_can_win(
+    store: PaperStore,
+) -> None:
+    inside = [Hit(chunk(REACT, 1, "hotpotqa results", title="ReAct"), 0.9)]
+    everywhere = [Hit(chunk(REFLEXION, 0, "reflection memory", title="Reflexion"), 0.5)]
+    ctx = ToolContext(SplitRetriever(inside, everywhere), store, ScriptedChatModel(script=[]))
+    out = await tool(ctx, "search_papers").ainvoke({"query": "results", "arxiv_id": REACT})
+    assert out.startswith(f"[{REACT}#1]")
+
+
 async def test_a_paper_that_is_not_ingested_still_gets_a_search(store: PaperStore) -> None:
     out = await tool(context(store), "search_papers").ainvoke(
         {"query": "reflection memory", "arxiv_id": "2303.04761v1"}
@@ -184,6 +216,7 @@ async def test_fetch_of_a_stored_paper_downloads_nothing(store: PaperStore, tmp_
     calls: list[str] = []
     out = await tool(fetching(store, tmp_path, calls), "fetch_paper").ainvoke({"arxiv_id": REACT})
     assert "already ingested" in out
+    assert "summarize_paper" in out  # a search naming the paper can return other papers
     assert calls == []
 
 
@@ -192,6 +225,7 @@ async def test_fetch_ingests_a_new_paper(store: PaperStore, tmp_path: Path) -> N
         {"arxiv_id": "2302.04761v1"}
     )
     assert "Ingested" in out
+    assert "summarize_paper" in out
     assert store.has_paper("2302.04761v1")
 
 
@@ -255,4 +289,5 @@ async def test_fetch_of_another_version_does_not_duplicate_the_paper(
         {"arxiv_id": "2210.03629v1"}
     )
     assert "already ingested" in out
+    assert "summarize_paper" in out  # a search naming the paper can return other papers
     assert calls == []

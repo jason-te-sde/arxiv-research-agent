@@ -159,7 +159,7 @@ def build_tools(ctx: ToolContext) -> list[BaseTool]:
             except ValueError:
                 return _not_an_id(arxiv_id)
             if stored is not None:
-                return f"{stored} is already ingested; use search_papers on it."
+                return f"{stored} is already ingested; read it with summarize_paper."
             return await _ingest(ctx.ingestor, arxiv_id)
         client = ctx.client
         try:
@@ -224,5 +224,5 @@ async def _ingest(ingestor: Ingestor, arxiv_id: str) -> str:
         return f"Could not ingest {arxiv_id}: {result.error}"
     return (
         f"Ingested {result.arxiv_id} ({result.title}), {result.chunks} passages. "
-        f"Use search_papers with arxiv_id={result.arxiv_id} to read it."
+        f"Read it with summarize_paper or search_papers with arxiv_id={result.arxiv_id}."
     )

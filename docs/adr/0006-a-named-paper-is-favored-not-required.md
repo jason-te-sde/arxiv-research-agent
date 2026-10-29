@@ -21,34 +21,41 @@ With an `arxiv_id` that names an ingested paper, `search_papers` runs the
 two-stage search twice, inside that paper and over the whole library, and
 returns the 5 best of both by reranker score. Both lists come from one
 query and one reranker, so their scores compare, and the top 5 of the two
-top-5 lists is the top 5 of all 40 candidates. Ties go to the named paper.
-An id that is not ingested, or is not an id, searches the whole library
+top-5 lists is the top 5 of all 40 candidates. Ties go to the named paper;
+beyond that it gets no advantage, so nothing guarantees it a place in the
+5. An id that is not ingested, or is not an id, searches the whole library
 and says so. `summarize_paper` and `compare_papers` still read only the
-papers they name.
+papers they name, and `fetch_paper` points at `summarize_paper` for reading
+the paper it added.
 
 Chosen on the dev set by replaying the search calls of the instruct
 model's dev run (`20261029T124034Z-answers-dev`) and judging each top 5
-against the evidence quotes ([ADR 4](0004-evidence-based-relevance.md)):
+against the evidence quotes ([ADR 4](0004-evidence-based-relevance.md));
+`scripts/replay_paper_filter.py` prints this table:
 
 | `arxiv_id` handling | calls | MRR@5 per call | questions with an evidence passage in a top 5 |
 | --- | --- | --- | --- |
 | search only that paper (before) | 9 | 0.278 | 3 of 10 |
 | ignore it | 10 | 0.708 | 9 of 10 |
 | favor that paper (this) | 10 | 0.708 | 9 of 10 |
+| favor it, and give its best passage the last place when none made the 5 | 10 | 0.708 | 9 of 10 |
 
 The id that does not exist ended in an error before, so that call searched
-nothing. Ignoring the id and favoring the paper tie on these calls.
-Favoring is kept because its candidates are everything the unfiltered
-search sees plus the named paper's own best 20, so a model that names the
-right paper keeps a targeted search.
+nothing. The last three tie on these calls. Favoring was kept over
+ignoring because its candidates are everything the unfiltered search sees
+plus the named paper's own best 20, so a passage of that paper that the
+library-wide search ranks below its 20 candidates can still be returned. It
+is not a targeted search.
 
 ## Consequences
 
-- A wrong id costs a second dense search and 20 more reranked candidates,
-  not the answer.
-- A right id can lose a passage of its own paper to a better-scoring one
-  from another paper. The three dev questions whose calls named the right
-  paper reached an evidence passage under every option.
+- Every search that names an ingested paper costs a second dense search
+  and 20 more reranked candidates; a wrong id costs nothing beyond that.
+- A right id can lose every passage of its own paper to better-scoring ones
+  from other papers, most likely with a generic query such as "main
+  results". The three dev questions whose calls named the right paper
+  reached an evidence passage under every option, but a reader who fetched
+  one paper and asks about it is better served by `summarize_paper`.
 - The replay holds the agent's queries fixed. With the new tool the model
   may search differently; the dev and test runs made after this change
   measure the whole agent.
@@ -59,5 +66,10 @@ right paper keeps a targeted search.
 - Filtering by title instead of id: the queries already carry the paper's
   name, and for a question that does not name its method the model guesses
   a paper either way.
-- Dropping the `arxiv_id` argument: tied on dev, and it takes the targeted
-  search away from a model that picks ids correctly.
+- Dropping the `arxiv_id` argument: tied on dev, and the named paper's own
+  candidates could no longer compete.
+- Reserving the named paper's best passage the last place: tied on dev, and
+  it would keep at least one passage of a paper a model names correctly, at
+  the cost of one slot in five when the id is wrong. It was weighed after
+  the second test run had measured favoring, and adopting it would need
+  another test run; it is left open.
