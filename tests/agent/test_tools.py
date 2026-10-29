@@ -82,10 +82,19 @@ async def test_repeated_passages_are_recorded_once(store: PaperStore) -> None:
     assert len(ctx.contexts) == len(set(ctx.contexts)) == 2
 
 
-async def test_search_inside_one_paper(store: PaperStore) -> None:
-    ctx = context(store)
-    await tool(ctx, "search_papers").ainvoke({"query": "results", "arxiv_id": REACT})
-    assert {c.arxiv_id for c in ctx.seen.values()} == {REACT}
+async def test_a_named_paper_keeps_its_matching_passages(store: PaperStore) -> None:
+    out = await tool(context(store), "search_papers").ainvoke(
+        {"query": "results", "arxiv_id": REACT}
+    )
+    assert out.startswith(f"[{REACT}#1]")
+
+
+async def test_naming_the_wrong_paper_does_not_hide_better_passages(store: PaperStore) -> None:
+    # A small model copies the wrong id from the paper list (docs/adr/0006).
+    out = await tool(context(store), "search_papers").ainvoke(
+        {"query": "reflection memory", "arxiv_id": REACT}
+    )
+    assert f"[{REFLEXION}#0]" in out
 
 
 async def test_search_accepts_an_unversioned_id(store: PaperStore) -> None:
@@ -100,6 +109,13 @@ async def test_search_in_a_paper_that_is_not_ingested_says_so(store: PaperStore)
     )
     assert "not ingested" in out
     assert "fetch_paper" in out
+
+
+async def test_a_paper_that_is_not_ingested_still_gets_a_search(store: PaperStore) -> None:
+    out = await tool(context(store), "search_papers").ainvoke(
+        {"query": "reflection memory", "arxiv_id": "2303.04761v1"}
+    )
+    assert f"[{REFLEXION}#0]" in out
 
 
 async def test_summarize_reads_only_that_paper(store: PaperStore) -> None:
@@ -219,6 +235,7 @@ async def test_a_title_is_not_mistaken_for_a_missing_paper(store: PaperStore) ->
     )
     assert "not an arXiv id" in out
     assert "fetch_paper" not in out
+    assert f"[{REACT}#1]" in out
 
 
 async def test_an_uploaded_paper_resolves_by_its_local_id(tmp_path: Path) -> None:

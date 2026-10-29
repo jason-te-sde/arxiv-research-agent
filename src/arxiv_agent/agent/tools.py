@@ -105,18 +105,22 @@ def build_tools(ctx: ToolContext) -> list[BaseTool]:
     async def search_papers(query: str, arxiv_id: str | None = None) -> str:
         """Search the ingested papers for passages relevant to a query.
 
-        Pass arxiv_id to search inside one paper only.
+        Pass arxiv_id to favor one paper; passages from other papers still
+        appear when they match the query better.
         """
-        paper: str | None = None
+        hits = await asyncio.to_thread(ctx.retriever.search, query)
+        note = ""
         if arxiv_id:
-            paper, problem = await lookup(arxiv_id)
-            if paper is None:
-                return problem
-        hits = await asyncio.to_thread(ctx.retriever.search, query, paper)
+            paper, note = await lookup(arxiv_id)
+            if paper is not None:
+                favored = await asyncio.to_thread(ctx.retriever.search, query, paper)
+                hits = _merge(favored, hits)
+            else:
+                note = f"{note} Showing passages from every paper instead.\n\n"
         if not hits:
-            return "No passages found."
+            return note + "No passages found."
         ctx.record([h.chunk for h in hits])
-        return format_hits(hits)
+        return note + format_hits(hits)
 
     async def summarize_paper(arxiv_id: str) -> str:
         """Summarize one ingested paper: problem, method, results and limitations."""
@@ -200,6 +204,18 @@ def build_tools(ctx: ToolContext) -> list[BaseTool]:
         )
         for fn in (search_papers, summarize_paper, fetch_paper, compare_papers)
     ]
+
+
+def _merge(favored: Sequence[Hit], everywhere: Sequence[Hit]) -> list[Hit]:
+    """The best of both lists by score, as many as the longer one holds.
+
+    Both come from one retriever and one query, so their scores compare, and the
+    top k of the two top-k lists is the top k of all their candidates. On equal
+    scores the favored paper comes first.
+    """
+    merged = {h.chunk.id: h for h in [*favored, *everywhere]}
+    best = sorted(merged.values(), key=lambda h: -h.score)
+    return best[: max(len(favored), len(everywhere))]
 
 
 async def _ingest(ingestor: Ingestor, arxiv_id: str) -> str:
