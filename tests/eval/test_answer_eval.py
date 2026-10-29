@@ -48,6 +48,7 @@ async def test_one_record_per_item_with_what_the_run_used(tmp_path: Path) -> Non
     assert record.contexts == ("ReAct\nreact interleaves reasoning traces",)
     assert record.citations == (f"{REACT}#0",)
     assert record.tools == ("search_papers",)
+    assert record.tool_args == ({"query": "react"},)
     assert record.iterations == 2
     assert not record.fallback
     assert record.latency_s >= 0
@@ -78,6 +79,7 @@ def test_record_round_trips_through_json() -> None:
         citations=("x#1",),
         unverified_citations=(),
         tools=("search_papers",),
+        tool_args=({"query": "react", "arxiv_id": "2210.03629v3"},),
         fallback=True,
         reason="budget_exhausted",
         iterations=3,
@@ -134,6 +136,7 @@ def test_records_written_before_prompt_sizes_existed_still_load() -> None:
         '"iterations": 1, "latency_s": 1.0}'
     )
     assert AnswerRecord.from_json(old).prompt_tokens == ()
+    assert AnswerRecord.from_json(old).tool_args == ()
 
 
 def test_stats_report_the_largest_prompt() -> None:

@@ -30,6 +30,7 @@ class AnswerRecord:
     iterations: int
     latency_s: float
     prompt_tokens: tuple[int, ...] = ()  # input tokens of each model call
+    tool_args: tuple[dict[str, Any], ...] = ()  # arguments of each call in ``tools``
 
     def to_json(self) -> str:
         return json.dumps(asdict(self))
@@ -37,7 +38,14 @@ class AnswerRecord:
     @classmethod
     def from_json(cls, line: str) -> AnswerRecord:
         row = json.loads(line)
-        for key in ("contexts", "citations", "unverified_citations", "tools", "prompt_tokens"):
+        for key in (
+            "contexts",
+            "citations",
+            "unverified_citations",
+            "tools",
+            "prompt_tokens",
+            "tool_args",
+        ):
             row[key] = tuple(row.get(key, ()))
         return cls(**row)
 
@@ -67,10 +75,12 @@ async def generate_answers(
             continue
         started = time.perf_counter()
         tools: list[str] = []
+        tool_args: list[dict[str, Any]] = []
         final: Final | None = None
         async for event in agent.run(item.question):
             if isinstance(event, ToolStarted):
                 tools.append(event.name)
+                tool_args.append(event.args)
             elif isinstance(event, Final):
                 final = event
         if final is None:  # pragma: no cover - ResearchAgent always ends with a Final
@@ -93,6 +103,7 @@ async def generate_answers(
             iterations=final.iterations,
             latency_s=round(time.perf_counter() - started, 3),
             prompt_tokens=final.prompt_tokens,
+            tool_args=tuple(tool_args),
         )
         with out.open("a", encoding="utf-8") as f:
             f.write(record.to_json() + "\n")
