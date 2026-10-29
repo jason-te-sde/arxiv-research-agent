@@ -1,0 +1,510 @@
+{
+  "meta": {
+    "version": "0.1.0.dev0",
+    "git_sha": "3bca58fce515b5e4cbeeb2209ed0e364eb11fe52",
+    "git_dirty": false,
+    "dataset": "test.jsonl",
+    "dataset_sha256": "cf756655409681d2018a85d236d4d2702624796f19878a1d5f55bb3e21fb637d",
+    "corpus_sha256": "47b39e2678ddcb9204d75d2bbfc1f6fef904a428ea482dbee6e0c2e4853aa9e4",
+    "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "chunk_size": 512,
+    "chunk_overlap": 64,
+    "k_candidates": 20,
+    "k_final": 5,
+    "started_at": "2026-10-29T04:17:22Z",
+    "provider": "ollama",
+    "agent_model": "qwen3:4b",
+    "max_iterations": 3,
+    "ollama_num_ctx": 16384,
+    "ollama_digests": {
+      "qwen3:4b": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7"
+    },
+    "judge_model": "llama3.1:8b",
+    "judge_digest": {
+      "llama3.1:8b": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e"
+    },
+    "judged_at": "2026-10-29T09:56:08Z"
+  },
+  "ragas": {
+    "n": 30,
+    "mean": {
+      "context_precision": 0.8044,
+      "context_recall": 0.7678,
+      "faithfulness": 0.7456,
+      "answer_relevancy": 0.6622
+    },
+    "unscored": {
+      "context_precision": 0,
+      "context_recall": 0,
+      "faithfulness": 2,
+      "answer_relevancy": 0
+    }
+  },
+  "operations": {
+    "n": 30,
+    "fallback_rate": 0.1,
+    "fallback_reasons": {
+      "budget_exhausted": 2,
+      "ungrounded_answer": 1
+    },
+    "mean_iterations": 2.6,
+    "latency_p50_s": 275.79,
+    "latency_p95_s": 502.7,
+    "cited_rate": 0.9,
+    "unverified_citations": 2,
+    "max_prompt_tokens": 12051
+  },
+  "items": [
+    {
+      "id": "A01",
+      "question": "In ReAct's human error analysis on HotpotQA, why are its problem-solving trajectories more trustworthy than those of chain-of-thought prompting, and how do the two compare on false-positive successes?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 268.383,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.7996503777599818
+      }
+    },
+    {
+      "id": "A03",
+      "question": "What two components make up Plan-and-Solve prompting, and which kind of Zero-shot-CoT error is it introduced to address?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 413.664,
+      "citations": 4,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999999999999997
+      }
+    },
+    {
+      "id": "A04",
+      "question": "Which approach samples a diverse set of reasoning paths from a language model and picks the final answer by majority vote, and what hypothesis explains why voting over diverse paths helps?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 290.556,
+      "citations": 3,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": NaN,
+        "answer_relevancy": 0.9231175074968071
+      }
+    },
+    {
+      "id": "A05",
+      "question": "When tools are added one at a time to a tool-using LLM prompting system on a multi-hop QA task, how does accuracy trend overall, and what failure pattern did a qualitative study comparing the 2-tool and 7-tool systems reveal?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 398.926,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.8874999999778125,
+        "context_recall": 0.75,
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.82660433764137
+      }
+    },
+    {
+      "id": "A06",
+      "question": "To test whether the benefit of generating intermediate reasoning steps comes merely from spending more computation, researchers prompted the model to output only a sequence of dots matching the length of the needed equation. What did they find, and what does it imply?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 323.673,
+      "citations": 1,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.616583751252768
+      }
+    },
+    {
+      "id": "A08",
+      "question": "How does the self-consistency method aggregate multiple reasoning paths, and what limitation of its majority-vote approach do the Tree of Thoughts authors point out?",
+      "fallback": true,
+      "reason": "budget_exhausted",
+      "iterations": 3,
+      "latency_s": 525.376,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.9999999999833333,
+        "context_recall": 0.6666666666666666,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "A09",
+      "question": "With GPT-3 text-davinci-003, what average accuracy across the arithmetic reasoning datasets does the zero-shot prompt reach that asks the model to devise a plan, extract relevant variables and calculate intermediate results?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 441.899,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "A10",
+      "question": "What accuracy did PaLM 540B reach on StrategyQA with chain-of-thought prompting?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 269.792,
+      "citations": 1,
+      "scores": {
+        "context_precision": 0.999999999975,
+        "context_recall": 0.034482758620689655,
+        "faithfulness": 0.375,
+        "answer_relevancy": 0.9999999999999996
+      }
+    },
+    {
+      "id": "B02",
+      "question": "How does Gorilla distinguish a hallucinated API call from an API call that is merely invoked incorrectly?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 114.978,
+      "citations": 3,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999999999999996
+      }
+    },
+    {
+      "id": "B03",
+      "question": "Why does ToolLLM's DFSDT use depth-first rather than breadth-first search when annotating solution paths?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 96.715,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0,
+        "faithfulness": 0.9615384615384616,
+        "answer_relevancy": 0.896786447315122
+      }
+    },
+    {
+      "id": "B04",
+      "question": "When an LLM controller must choose an expert model for a subtask but cannot fit every model description into the prompt, how does it narrow down the candidates?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 263.629,
+      "citations": 3,
+      "scores": {
+        "context_precision": 0.5888888888692593,
+        "context_recall": 0.0,
+        "faithfulness": 0.05555555555555555,
+        "answer_relevancy": 0.8119780952437634
+      }
+    },
+    {
+      "id": "B05",
+      "question": "What two functions does the Task Fetching Unit in LLMCompiler perform?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 235.626,
+      "citations": 2,
+      "scores": {
+        "context_precision": 0.8666666666377778,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9663267382594444
+      }
+    },
+    {
+      "id": "B06",
+      "question": "On atomic API-call correctness, how does JSON-format tool calling fare for open-source versus closed-source LLMs, and what do the authors infer from this?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 281.797,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 0.0,
+        "faithfulness": 0.09090909090909091,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "B07",
+      "question": "How much human-written seed data underlies the instruction generation in Gorilla compared with ToolLLM?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 397.589,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.9888888888779013,
+        "context_recall": 1.0,
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.9999999999999996
+      }
+    },
+    {
+      "id": "B10",
+      "question": "In the human evaluation of the system that uses an LLM as controller over expert models, how many diverse requests were collected to assess task planning, model selection and response generation?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 457.357,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "C01",
+      "question": "In Reflexion's modular formulation, which three models are used and what does each one do?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 266.55,
+      "citations": 0,
+      "scores": {
+        "context_precision": 0.0,
+        "context_recall": 0.75,
+        "faithfulness": 0.14285714285714285,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "C02",
+      "question": "How does Voyager index the programs in its skill library, and what does it use as the query when retrieving skills for a new task?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 140.049,
+      "citations": 4,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.9152986930855734
+      }
+    },
+    {
+      "id": "C03",
+      "question": "Since LATS involves no training, what two components make up the value function it uses to score new nodes during search?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 111.629,
+      "citations": 3,
+      "scores": {
+        "context_precision": 0.999999999975,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9692618772778315
+      }
+    },
+    {
+      "id": "C04",
+      "question": "In an LLM system that manages its own context the way an operating system pages memory, what warning does the model receive as the prompt grows toward the context limit, and what can it do in response?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 151.526,
+      "citations": 3,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.892967046872578
+      }
+    },
+    {
+      "id": "C05",
+      "question": "In an LLM-driven architecture for believable simulated agents, how is the final retrieval score of a memory computed from its recency, relevance and importance?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 343.471,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.0,
+        "context_recall": 0.0,
+        "faithfulness": 0.9333333333333333,
+        "answer_relevancy": 0.9936983488658896
+      }
+    },
+    {
+      "id": "C07",
+      "question": "How does Voyager's self-verification differ from the self-reflection used in Reflexion?",
+      "fallback": true,
+      "reason": "budget_exhausted",
+      "iterations": 3,
+      "latency_s": 553.043,
+      "citations": 4,
+      "scores": {
+        "context_precision": 0.8041666666465626,
+        "context_recall": 1.0,
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.9999999999999997
+      }
+    },
+    {
+      "id": "C08",
+      "question": "How do Reflexion and MemGPT each cope with the fixed LLM context window when they keep memory across steps or trials?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 394.141,
+      "citations": 0,
+      "scores": {
+        "context_precision": 0.4277828652757356,
+        "context_recall": 1.0,
+        "faithfulness": NaN,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "C09",
+      "question": "How many unique items did Voyager discover within 160 prompting iterations in its exploration evaluation?",
+      "fallback": true,
+      "reason": "ungrounded_answer",
+      "iterations": 3,
+      "latency_s": 474.974,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9443421382350267
+      }
+    },
+    {
+      "id": "C10",
+      "question": "In the generative agents Smallville simulation, how many of the 25 agents knew about Isabella's Valentine's Day party by the end of the two game days, given that only one knew at the start?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 312.448,
+      "citations": 4,
+      "scores": {
+        "context_precision": 0.94999999997625,
+        "context_recall": 0.5,
+        "faithfulness": 0.9714285714285714,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "D03",
+      "question": "In CRAG, which action is triggered when the retrieval evaluator gives only an intermediate confidence score, and how does it treat the retrieved knowledge?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 264.548,
+      "citations": 2,
+      "scores": {
+        "context_precision": 0.19999999998,
+        "context_recall": 0.6666666666666666,
+        "faithfulness": 0.4,
+        "answer_relevancy": 0.8006216492301405
+      }
+    },
+    {
+      "id": "D05",
+      "question": "For benchmark tasks that require operating a website, such as navigating to a particular page or modifying site content, how can success be verified programmatically, and which states does the check examine?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 249.927,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 0.8125,
+        "answer_relevancy": 0.7734856331803602
+      }
+    },
+    {
+      "id": "D06",
+      "question": "How can feedback signals about generation quality be incorporated into language model training more cheaply than PPO-style RLHF, which relies on separate reward models?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 266.735,
+      "citations": 5,
+      "scores": {
+        "context_precision": 0.4166666666458333,
+        "context_recall": 0.6666666666666666,
+        "faithfulness": 0.92,
+        "answer_relevancy": 0.9473935899115395
+      }
+    },
+    {
+      "id": "D07",
+      "question": "How do the critic model in Self-RAG and the retrieval evaluator in Corrective RAG (CRAG) compare in terms of base model and size?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 3,
+      "latency_s": 393.99,
+      "citations": 0,
+      "scores": {
+        "context_precision": 0.0,
+        "context_recall": 0.0,
+        "faithfulness": 0.95,
+        "answer_relevancy": 0.0
+      }
+    },
+    {
+      "id": "D08",
+      "question": "How does the retrieval index in RAPTOR differ from the flat Wikipedia passage index used in the original RAG model?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 113.847,
+      "citations": 2,
+      "scores": {
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9849701608867972
+      }
+    },
+    {
+      "id": "D10",
+      "question": "In SWE-agent's analysis of unresolved instances, what percentage fall into the Incorrect Implementation or Overly Specific Implementation failure categories?",
+      "fallback": false,
+      "reason": null,
+      "iterations": 2,
+      "latency_s": 87.637,
+      "citations": 2,
+      "scores": {
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0,
+        "faithfulness": 0.7142857142857143,
+        "answer_relevancy": 0.8034522666471666
+      }
+    }
+  ]
+}
