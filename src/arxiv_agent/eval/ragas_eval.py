@@ -44,7 +44,8 @@ def to_sample(record: AnswerRecord, item: EvalItem) -> dict[str, Any]:
     }
 
 
-def _scored(value: float | None) -> bool:
+def is_scored(value: float | None) -> bool:
+    """False for a value the judge did not produce: None, or NaN after a timeout."""
     return value is not None and not math.isnan(value)
 
 
@@ -54,7 +55,7 @@ def summarize(scores: Sequence[ScoreRecord]) -> dict[str, Any]:
     unscored: dict[str, int] = {}
     for metric in METRICS:
         values = [s.scores.get(metric) for s in scores]
-        good = [v for v in values if _scored(v)]
+        good = [v for v in values if is_scored(v)]
         mean[metric] = round(sum(good) / len(good), 4) if good else None  # type: ignore[arg-type]
         unscored[metric] = len(values) - len(good)
     return {"n": len(scores), "mean": mean, "unscored": unscored}

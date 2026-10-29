@@ -15,7 +15,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from arxiv_agent.eval.ragas_eval import METRICS
+from arxiv_agent.eval.ragas_eval import METRICS, is_scored
 from arxiv_agent.eval.stats import bootstrap_ci
 
 _RETRIEVAL_METRICS = (("mrr", "MRR@5"), ("hit_rate", "Hit@5"), ("recall", "Recall@5"))
@@ -65,7 +65,7 @@ def _esc(value: object) -> str:
 
 
 def _fmt(value: float | None) -> str:
-    return "-" if value is None else f"{value:.3f}"
+    return f"{value:.3f}" if is_scored(value) else "-"
 
 
 def _load(run_dirs: Sequence[Path]) -> tuple[list[tuple[str, dict[str, Any]]], ...]:
@@ -182,7 +182,7 @@ def _answers_section(runs: Sequence[tuple[str, dict[str, Any]]]) -> str:
     ]
     intervals = ""
     for m in METRICS:
-        scored = [s for item in data["items"] if (s := item["scores"].get(m)) is not None]
+        scored = [s for item in data["items"] if is_scored(s := item["scores"].get(m))]
         span = "{:.3f} to {:.3f}".format(*bootstrap_ci(scored)) if scored else "-"
         intervals += (
             f'<tr><td>{_esc(m)}</td><td class="num">{_fmt(ragas["mean"].get(m))}</td>'

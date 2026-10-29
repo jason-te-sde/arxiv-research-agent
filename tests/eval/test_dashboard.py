@@ -179,3 +179,20 @@ def test_ragas_means_have_intervals_over_the_scored_questions(tmp_path: Path) ->
     assert f"{low:.3f} to {high:.3f}" in section
     assert "2 of 3" in section  # context_precision: one question unscored
     assert "0 of 3" in section  # faithfulness: unscored everywhere, so no interval
+
+
+def test_a_judge_timeout_stored_as_nan_counts_as_unscored(tmp_path: Path) -> None:
+    run = answer_run(tmp_path, "q")
+    summary = json.loads((run / "summary.json").read_text())
+    item = summary["items"][0]
+    summary["items"] = [
+        {**item, "id": f"t{i}", "scores": {**item["scores"], "context_precision": v}}
+        for i, v in enumerate([1.0, 0.5, float("nan")])
+    ]
+    (run / "summary.json").write_text(json.dumps(summary))  # writes NaN, as the judge does
+    html = render_dashboard([run])
+    low, high = bootstrap_ci([1.0, 0.5])
+    section = html.split('id="answers"')[1].split("</section>")[0]
+    assert f"{low:.3f} to {high:.3f}" in section
+    assert "2 of 3" in section
+    assert "nan" not in section.lower()
