@@ -1,0 +1,22 @@
+{
+  "version": "0.1.0.dev0",
+  "git_sha": "e1d76e046ca0443c16b372bdf680343d8ec3f336",
+  "git_dirty": false,
+  "dataset": "test.jsonl",
+  "dataset_sha256": "cf756655409681d2018a85d236d4d2702624796f19878a1d5f55bb3e21fb637d",
+  "corpus_sha256": "47b39e2678ddcb9204d75d2bbfc1f6fef904a428ea482dbee6e0c2e4853aa9e4",
+  "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "chunk_size": 512,
+  "chunk_overlap": 64,
+  "k_candidates": 20,
+  "k_final": 5,
+  "started_at": "2026-10-29T13:35:47Z",
+  "provider": "ollama",
+  "agent_model": "qwen3:4b-instruct-2507-q4_K_M",
+  "max_iterations": 3,
+  "ollama_num_ctx": 16384,
+  "ollama_digests": {
+    "qwen3:4b-instruct-2507-q4_K_M": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0"
+  }
+}

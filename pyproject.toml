@@ -1,0 +1,102 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "arxiv-research-agent"
+version = "0.1.0.dev0"
+description = "A research agent that answers questions over arXiv papers with cited, retrieval-grounded answers."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = [
+  "langchain-core>=1.7,<2",
+  "langchain-text-splitters>=1.1,<2",
+  "langchain-chroma>=1.1,<2",
+  "chromadb>=1.5,<2",
+  "langchain-huggingface>=1.2,<2",
+  "sentence-transformers>=6.2,<7",
+  "langchain-ollama>=1.1,<2",
+  "langchain-anthropic>=1.7,<2",
+  "pypdf>=6.0",
+  "httpx>=0.28",
+  "defusedxml>=0.7",
+  "numpy>=2.0",
+  "pydantic>=2.7",
+  "fastapi>=0.162",
+  "sse-starlette>=3.6",
+  "uvicorn>=0.30",
+  "python-multipart>=0.0.20",
+]
+
+[project.optional-dependencies]
+# ragas 0.4.3 imports langchain_community.chat_models.vertexai, which
+# langchain-community 0.4.2 removed; the exact pin keeps `import ragas` working.
+eval = ["ragas==0.4.3", "langchain-community==0.4.1"]
+dev = [
+  "pytest>=8.2",
+  "pytest-asyncio>=0.23",
+  "pytest-cov>=5.0",
+  "mypy>=1.10",
+  "ruff>=0.5",
+  "types-defusedxml>=0.7.0.20260504",
+]
+
+[project.scripts]
+arxiv-agent = "arxiv_agent.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/arxiv_agent"]
+
+[tool.uv]
+# Linux CI and Linux users get CPU-only torch; the CUDA wheels are gigabytes
+# this project never uses.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+  "error",
+  # GitHub's macOS runners are VMs without Metal; torch warns once when it probes
+  # for an MPS device. Every model here runs on CPU, so the probe result is unused.
+  "ignore:Skipping device Apple Paravirtual device:UserWarning",
+]
+markers = [
+  "slow: loads real embedding / cross-encoder models (downloads them on first run)",
+]
+addopts = "--strict-markers --strict-config"
+
+[tool.coverage.run]
+source = ["arxiv_agent"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "ANN", "ASYNC", "S", "PTH",
+          "RET", "ARG", "C4", "ISC", "PIE", "TID"]
+ignore = ["ANN401", "ISC001"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ANN001", "ANN201", "ARG001", "ARG002"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_untyped_calls = false

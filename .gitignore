@@ -1,1 +1,14 @@
 .superpowers/
+__pycache__/
+*.egg-info/
+.venv/
+.coverage
+coverage.xml
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+# Downloaded PDFs and the vector index are rebuilt from corpus/ by `arxiv-agent ingest`.
+data/
+.env
