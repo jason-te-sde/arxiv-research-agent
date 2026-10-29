@@ -14,13 +14,13 @@ do not cover.
 | Chunks | 512 embedder tokens including the title prefix, 64 overlap (ADR 3) |
 | Embedder | `sentence-transformers/all-MiniLM-L6-v2`, normalized, cosine |
 | Reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2`, 20 candidates in, 5 out |
-| Agent | `qwen3:4b` on Ollama, which resolves to Qwen3-4B-Thinking-2507 (digest `359d7dd4bcda`); asked for thinking off, which this build does not honor ([known defects](#known-defects)); temperature 0.7, top-p 0.8, top-k 20, seed 0, output capped at 2048 tokens, 16384-token context; at most 3 agent calls plus one fallback call |
+| Agent | `qwen3:4b-instruct-2507-q4_K_M` on Ollama (Qwen3-4B-Instruct-2507, digest `0edcdef34593`), which does not think; the first test run used `qwen3:4b`, a thinking build ([known defects](#known-defects)); temperature 0.7, top-p 0.8, top-k 20, seed 0, output capped at 2048 tokens, 16384-token context; at most 3 agent calls plus one fallback call |
 | Judge | `llama3.1:8b` on Ollama, temperature 0, seed 0, output capped at 2048 tokens; a different model family from the agent, so it is not grading its own writing |
 | Machine | Apple M2, 16 GB, CPU for embeddings and reranking, Ollama on the same machine |
 
 The agent is not greedy on purpose. These are the values Qwen publishes for
-non-thinking use, which is what the agent asks for, and Qwen warns against
-greedy decoding; the first greedy run here looped on one question for over
+this instruct build, and Qwen warns against greedy decoding; the first
+greedy run here, with an earlier build, looped on one question for over
 four hours until the output cap was added. The seed is fixed, but no second full run checked that answers
 repeat, and on other hardware they will differ. Retrieval numbers involve
 no sampling and repeat exactly on the same index.
@@ -42,6 +42,26 @@ own before any measurement ran on it (`git log -- eval/questions/test.jsonl`).
 
 Each question carries verbatim evidence quotes; `arxiv-agent eval
 check-dataset` confirms every quote occurs in its paper and in a stored chunk.
+
+## The test set was run twice
+
+The first test run (`20261029T041722Z-answers-test`, commit `3bca58f`)
+found two defects in the agent, by reading its answers: the model's
+reasoning was part of every answer, and on 11 of the 30 questions every
+passage the agent retrieved came from a paper other than the one asked
+about ([known defects](#known-defects)). Both were fixed (commits `d5d7bdb` and
+`2b57107`), the second with a choice made on the dev set
+([ADR 6](adr/0006-a-named-paper-is-favored-not-required.md)), and the test
+set was run once more (`20261029T133547Z-answers-test`, commit `e1d76e0`).
+Both runs are committed; the README reports the second.
+
+The second run is not a clean held-out measurement: the fixes were made
+because of what the first run's answers showed. Neither fix targets a
+question (one changes the model build, the other how a tool treats a paper
+id), nothing was changed because of the second run's answers, and the test
+set was not run a third time. Since `e1d76e0` the source has changed only in
+a comment and in the messages `fetch_paper` returns, which evaluation never
+shows because it runs with fetching disabled.
 
 ## Reproducing
 
@@ -119,9 +139,51 @@ reranker's and how much the embedder's.
 
 ### Answers, test set
 
-Run `eval/runs/20261029T041722Z-answers-test`: the agent at commit `3bca58f`
-on the 30 test questions, judged by `llama3.1:8b`. Intervals are percentile
-bootstrap over questions, as the dashboard computes them.
+Run `eval/runs/20261029T133547Z-answers-test`: the agent at commit
+`e1d76e0` on the 30 test questions, judged by `llama3.1:8b`. Intervals are
+percentile bootstrap over questions, as the dashboard computes them.
+
+| metric | mean | 95% interval | scored |
+| --- | --- | --- | --- |
+| context precision | 0.914 | 0.850 to 0.967 | 30 of 30 |
+| context recall | 0.809 | 0.702 to 0.904 | 29 of 30 |
+| faithfulness | 0.775 | 0.674 to 0.872 | 29 of 30 |
+| answer relevancy | 0.693 | 0.565 to 0.807 | 30 of 30 |
+
+The judge timed out on one score (A10, context recall) and returned output
+it could not parse for another (C10, faithfulness); both are left out of
+the mean, not counted as zero.
+
+All 30 questions were answered by the agent within its three calls (2.9 on
+average); none fell back. 28 answers carry at least one verified citation
+and none cites a passage the agent did not retrieve; A05 and C03 cite
+nothing. Median latency was 33 s and the 95th percentile 61 s. The longest
+prompt was 7,037 tokens. No answer contains a think tag or opens with
+deliberation, and answers average 728 characters.
+
+Against the first test run, question by question (paired bootstrap over the
+questions both runs scored):
+
+| metric | change | 95% interval | questions |
+| --- | --- | --- | --- |
+| context precision | +0.110 | +0.002 to +0.226 | 30 |
+| context recall | +0.016 | −0.107 to +0.158 | 29 |
+| faithfulness | +0.043 | −0.090 to +0.183 | 27 |
+| answer relevancy | +0.031 | −0.139 to +0.207 | 30 |
+
+Only context precision rose by more than 30 questions can separate from
+zero: the agent now retrieves from a right paper on 29 questions instead of
+19. The other three changes are within the noise of this set and this
+judge, although the answers changed in kind: they no longer carry the
+model's deliberation, and 5 score zero on answer relevancy instead of 8.
+A05, the one question whose passages all came from other papers, named no
+paper in its search; the library-wide search missed ReWOO, and the answer
+says the passages do not hold what was asked.
+
+### Answers, test set, first run (before the fixes)
+
+Run `eval/runs/20261029T041722Z-answers-test`: commit `3bca58f`, agent
+`qwen3:4b` (the thinking build), judged by `llama3.1:8b`.
 
 | metric | mean | 95% interval | scored |
 | --- | --- | --- | --- |
@@ -130,24 +192,19 @@ bootstrap over questions, as the dashboard computes them.
 | faithfulness | 0.746 | 0.618 to 0.859 | 28 of 30 |
 | answer relevancy | 0.662 | 0.509 to 0.802 | 30 of 30 |
 
-The judge timed out on two faithfulness scores (A04, C08); they are left out
-of the mean, not counted as zero.
+The judge timed out on two faithfulness scores (A04, C08). 27 questions
+were answered within three calls (2.6 on average) and 3 fell back: two
+reached the budget and one answered without retrieving a second time. 27
+answers carry a verified citation; 2 citations, in A09 and B02, named
+passages the agent never retrieved and were flagged. Median latency was
+276 s and the 95th percentile 503 s, with swap in use and the model writing
+its reasoning before every answer (4,815 characters on average). The
+longest prompt was 12,051 tokens.
 
-27 questions were answered by the agent within its three calls, using 2.6
-calls on average. 3 fell back: two reached the budget and one answered
-without retrieving a second time. 27 answers carry at least one verified
-citation; 2 citations, in A09 and B02, named passages the agent never
-retrieved and were flagged. Median latency was 276 s and the 95th
-percentile 503 s, with swap in use. The longest prompt was 12,051 tokens, so
-with the 2,048-token output cap nothing was cut from the 16,384-token
-context.
-
-Every metric is below its dev value, as expected of a set nothing was tuned
-on, and further below than the dev intervals would suggest. Most of the gap
-is in the two defects below. On the 19 questions where the agent retrieved
-from a right paper, the means are 0.949, 0.905, 0.813 (17 scored) and 0.774;
-that split was chosen after reading the answers, so it explains the gap
-rather than measuring the system.
+On the 19 questions where the agent retrieved from a right paper, the means
+were 0.949, 0.905, 0.813 (17 scored) and 0.774. That split was chosen after
+reading the answers, so it explains the gap to dev rather than measuring
+the system.
 
 ### Chunk size, dev set
 
@@ -168,78 +225,108 @@ embedder reads only the first 256 of them (ADR 3).
 
 ### Answers, dev set
 
-Run `eval/runs/20261029T023406Z-answers-dev`. The dev set is where the
-prompts and the grounding rule were tuned, so these numbers are optimistic
-by construction and are shown only next to the test numbers, never instead
-of them.
+The dev set is where the prompts, the grounding rule and the search fix
+were chosen, so its numbers are optimistic by construction and are shown
+only next to the test numbers, never instead of them.
 
-| context precision | context recall | faithfulness | answer relevancy |
-| --- | --- | --- | --- |
-| 0.960 | 1.000 | 0.880 | 0.887 |
+| run | agent | context precision | context recall | faithfulness | answer relevancy |
+| --- | --- | --- | --- | --- | --- |
+| `20261029T023406Z-answers-dev` | `qwen3:4b` (thinking build), search restricted to the named paper | 0.960 | 1.000 | 0.880 | 0.887 |
+| `20261029T125029Z-answers-dev` | instruct build, search favors the named paper | 0.913 | 0.833 | 0.879 | 0.775 |
 
-All 10 answered with citations, none unverified; 2 reached the three-call
-budget and were answered by the fallback. The rule that sends an answer
-without retrieval back once was added after an earlier dev run with
-`qwen3:8b` answered 5 of 10 questions from the model's own memory.
+Between them, `20261029T124034Z-answers-dev` (instruct build, search still
+restricted) has answers and no scores; it is the run ADR 6 replays.
+
+The newer run scores lower although its answers read better: every question
+retrieves from a right paper (2 of 10 did not in the older run), no answer
+falls back, and none carries reasoning. Read per question, the drops do not
+follow answer quality. A02's answer restates the reference answer nearly
+word for word and its answer relevancy fell from 1.00 to 0.41, and the
+older run scored context recall 1.0 on the two questions where it retrieved
+only other papers. On ten questions this is the judge's noise; nothing was
+changed because of it.
+
+The rule that sends an answer without retrieval back once was added after
+an earlier dev run with `qwen3:8b` answered 5 of 10 questions from the
+model's own memory.
 
 ## Known defects
 
-Found by reading the test answers after the run. The first two are defects
-in the agent, not fixed in the code the numbers above describe; fixing
-either changes every answer number, so a fix needs a new dev run and a new
-test run. The third is about the judge.
+The first two were found by reading the first test run's answers and are
+fixed; they are described here because that run's numbers include them.
+The other two are open.
 
-### The model's reasoning is part of every answer
+### The model's reasoning was part of every answer (fixed)
 
 The `qwen3:4b` tag on Ollama has the same digest as
 `qwen3:4b-thinking-2507-q4_K_M`, a build that always thinks: its prompt
-template opens every reply with `<think>`. The agent asks for thinking off
-(`reasoning=False` in `agent/models.py`). With this build that does not stop
-the thinking; it only stops Ollama from separating it, so the reasoning
-arrives as answer text.
+template opens every reply with `<think>`. The agent asked for thinking off
+(`reasoning=False` in `agent/models.py`). With this build that did not stop
+the thinking; it only stopped Ollama from separating it, so the reasoning
+arrived as answer text.
 
-- All 40 answers, dev and test, open with the model deliberating ("Okay,
+- All 40 answers, dev and test, opened with the model deliberating ("Okay,
   let's break this down...").
-- 25 of the 30 test answers then close with `</think>` and give a short
+- 25 of the 30 test answers then closed with `</think>` and gave a short
   final answer after it.
-- 4 (A05, A08, C01, C08) stop mid-sentence: thinking and answer share the
-  2,048-token output cap, and the cap came first. One more (C07) ends
+- 4 (A05, A08, C01, C08) stopped mid-sentence: thinking and answer shared
+  the 2,048-token output cap, and the cap came first. One more (C07) ended
   without the closing tag.
 
-The judge therefore reads the deliberation plus the answer. Faithfulness
-checks claims the model made while thinking aloud, guesses included. Answer
-relevancy generates questions from that text: 8 test answers score exactly
-0, which RAGAS assigns when it reads a response as noncommittal; no dev
-answer did. Citation counts include citations made while thinking.
+The judge therefore read the deliberation plus the answer. Faithfulness
+checked claims the model made while thinking aloud, guesses included, and
+answer relevancy generated questions from that text: 8 test answers scored
+exactly 0, which RAGAS assigns when it reads a response as noncommittal.
+Citation counts included citations made while thinking.
 
-Two fixes would work: the instruct build (`qwen3:4b-instruct-2507`), which
-does not think and is the build the sampling values above are published
-for, or this build with thinking on, so that Ollama separates it, and a much
-larger output cap.
+Fixed in `d5d7bdb` by the instruct build (`qwen3:4b-instruct-2507-q4_K_M`),
+which does not think and is the build the sampling values above are
+published for. Every answer run now counts answers that carry a think tag
+(`think_tags` in its summary; a lower bound, since an answer cut off by the
+output cap carries none), and every run since, two on dev and one on
+test, counts none.
 
-### The agent often searches the wrong paper
+### The agent searched the wrong paper (fixed)
 
-`search_papers` takes an optional `arxiv_id` to search one paper, and the
-agent picks ids from the list of ingested papers in its prompt. On 11 of the
-30 test questions, every passage it retrieved came from a paper other than
-the one the question is about. C01 and C08 searched HuggingGPT
-(`2303.17580v4`) for Reflexion (`2303.11366v4`); D07 searched AgentTuning
-(`2310.12823v2`) for Self-RAG (`2310.11511v1`). In C01 and D07 the model's
-reasoning notices the mismatch, and neither searches again.
+`search_papers` takes an optional `arxiv_id`, and it used to search inside
+that paper only. The agent picks ids from the list of ingested papers in
+its prompt. On 11 of the 30 questions of the first test run, every passage
+it retrieved came from a paper other than the one the question is about.
+C01 and C08 searched HuggingGPT (`2303.17580v4`) for Reflexion
+(`2303.11366v4`); D07 searched AgentTuning (`2310.12823v2`) for Self-RAG
+(`2310.11511v1`). In C01 and D07 the model's reasoning noticed the
+mismatch, and neither searched again.
 
-The question as written, searched with no filter, does better: it puts a
-relevant passage in the top 5 for 20 questions, while the agent reached any
-passage of a right paper, a weaker test, on 19.
+The instruct build made it worse: 5 of the 10 dev questions searched only a
+wrong paper (2 with the thinking build), with queries that named the right one ("Tree of Thoughts",
+"WebArena") next to the id of a neighbor in the list. Fixed in `2b57107`
+([ADR 6](adr/0006-a-named-paper-is-favored-not-required.md)): a search that
+names a paper now reranks that paper's candidates together with the whole
+library's, and an unknown id searches the whole library. In the second test
+run, 1 question of 30 retrieved only other papers (A05, whose search named
+no paper).
 
-### The judge credits passages that cannot hold the answer
+### The judge credits passages that cannot hold the answer (open)
 
-A09 asks for an accuracy reported only in the Plan-and-Solve paper (76.7%)
-and B10 for a count reported only in HuggingGPT (130 requests). The agent
-retrieved from other papers only (Chain-of-Thought and AgentBench), and the
-judge still scored context recall 1.0 on both. Over the 11 wrong-paper
-questions, context recall averages 0.53 and context precision 0.55. Some of
-those passages are from related papers and may help, but A09 and B10 show a
-lenient judge, and no human grading measured how often it is.
+In the first test run, A09 asked for an accuracy reported only in the
+Plan-and-Solve paper (76.7%) and B10 for a count reported only in
+HuggingGPT (130 requests). The agent retrieved from other papers only
+(Chain-of-Thought and AgentBench), and the judge still scored context
+recall 1.0 on both. In the second test run, 12 questions retrieved no
+passage that contains an evidence quote, and the judge scored context
+recall 1.0 on 7 of them. A passage can state the answer in other words
+than the quote (ADR 4), so that is not a count of lenient scores, but
+context recall here should not be read as "the evidence was retrieved". No
+human grading measured how lenient the judge is.
+
+### A search that names the right paper can miss it (open)
+
+Since ADR 6, naming a paper only adds its candidates to the library's, so a
+generic query can return no passage of it. On dev this never cost a hit.
+Reserving the named paper's best passage the last place in the 5 tied on
+dev and was not adopted, because the second test run had already measured
+the current behavior. `fetch_paper` points the model at `summarize_paper`,
+which reads only the one paper.
 
 ## What these numbers do not show
 
@@ -250,6 +337,9 @@ lenient judge, and no human grading measured how often it is.
   closer to the papers than a stranger's would be. 11 of the 30 avoid naming
   the method to push against that; it is still a bias toward retrieval
   succeeding.
+- **A test set seen twice.** The reported test run follows fixes prompted
+  by reading the first run's answers
+  ([above](#the-test-set-was-run-twice)).
 - **One small judge.** RAGAS scores come from a local 8B judge, with no
   check against human grading, and it is lenient on context in at least two
   cases (above). Read the per-question scores in `scores.jsonl`, not only
@@ -260,5 +350,5 @@ lenient judge, and no human grading measured how often it is.
 - **The Claude provider.** The Anthropic adapter is covered by unit tests
   only; no reported number comes from it.
 - **Latency.** Measured on a 16 GB laptop running the model, the embedder and
-  the reranker together, with swap in use. It describes this machine, not the
-  design.
+  the reranker together, with swap in use during the first test run. It
+  describes this machine, not the design.

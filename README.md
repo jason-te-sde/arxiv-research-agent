@@ -12,8 +12,8 @@ retrieval augmentation, pinned to exact arXiv versions.
 
 ## Measured results
 
-On the 30-question test set, with `qwen3:4b` as the agent and
-`llama3.1:8b` as the judge, both local. Every number comes from a run
+On the 30-question test set, with `qwen3:4b-instruct-2507-q4_K_M` as the
+agent and `llama3.1:8b` as the judge, both local. Every number comes from a run
 committed under [eval/runs](eval/runs);
 [docs/evaluation.md](docs/evaluation.md) has the method, the intervals and
 what the numbers do not show, and `arxiv-agent eval dashboard` charts them.
@@ -27,13 +27,19 @@ Reranking adds 0.164 MRR@5, with a 95% interval of +0.039 to +0.297.
 
 | Answers (RAGAS) | context precision | context recall | faithfulness | answer relevancy |
 | --- | --- | --- | --- | --- |
-| agent | 0.804 | 0.768 | 0.746 | 0.662 |
+| agent | 0.914 | 0.809 | 0.775 | 0.693 |
 
-**Known defects.** The `qwen3:4b` tag is a build that always thinks, so the
-model's reasoning comes out as part of every answer, and 4 of the 30 test
-answers ran out of output tokens before reaching one. On 11 questions the
-agent searched the wrong paper. The answer scores above include both;
-[docs/evaluation.md](docs/evaluation.md#known-defects) has the details.
+All 30 questions were answered within the agent's three calls, at a median
+of 33 s each on an M2 laptop.
+
+**The test set was run twice.** The first run (0.804, 0.768, 0.746, 0.662)
+showed two defects in the agent: the `qwen3:4b` tag is a build that always
+thinks, so the model's reasoning came out as part of every answer, and on
+11 questions the agent searched only the wrong paper. Both were fixed, the
+second with a choice made on the dev set, and the table above is the second
+run. Only the context precision gain is clear of the noise of 30 questions;
+[docs/evaluation.md](docs/evaluation.md#the-test-set-was-run-twice) says
+what a second run on a seen test set is worth.
 
 ## How it works
 
