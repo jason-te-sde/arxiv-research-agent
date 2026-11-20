@@ -33,9 +33,16 @@ paper and its longest common substring with that evidence quote covers at
 least 60% of the quote, after case, whitespace, quote-mark and ligature
 folding. No model is involved, so retrieval scores are exact and repeatable.
 
-## Who wrote the questions
+## How the questions were made
 
-The developer, by reading each paper's extracted text. The questions are
-therefore phrased by someone who has seen the source passage, which makes
-them easier for retrieval than questions from a reader who has not; the
-reported numbers carry that bias.
+There are 40 questions: 30 in `test.jsonl` and 10 in `dev.jsonl`. Together
+they cover 24 of the 65 corpus papers, drawn by a seeded random split
+stratified by kind (single, multi, numeric). Each question was checked
+against its source passage: its evidence quotes occur verbatim in the
+paper's extracted text and in a stored chunk, which
+`arxiv-agent eval check-dataset` verifies.
+
+The questions were composed with the source passage in view, so their
+wording is closer to the papers than a reader's who has not seen them would
+be, which makes them easier for retrieval; the reported numbers carry that
+bias.
