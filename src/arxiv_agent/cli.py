@@ -67,6 +67,10 @@ def build_parser() -> argparse.ArgumentParser:
     dashboard = evals.add_parser("dashboard", help="write the HTML dashboard of all runs")
     dashboard.add_argument("--out", type=Path, default=Path("docs/eval/dashboard.html"))
 
+    commands.add_parser(
+        "mcp", help="serve the retrieval tools to an MCP client over stdio (needs the mcp extra)"
+    )
+
     serve = commands.add_parser("serve", help="run the HTTP API")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -99,6 +103,8 @@ def _dispatch(args: argparse.Namespace, settings: Settings) -> int:  # pragma: n
             create_app(runtime.Runtime.from_settings(settings)), host=args.host, port=args.port
         )
         return 0
+    if args.command == "mcp":
+        return _serve_mcp(settings)
     if args.command == "ask":
         agent = runtime.Runtime.from_settings(settings).agent
         asyncio.run(cmd_ask(agent, args.question, sys.stdout, sys.stderr))
@@ -119,6 +125,35 @@ def _dispatch(args: argparse.Namespace, settings: Settings) -> int:  # pragma: n
     if args.command == "eval":
         return _dispatch_eval(args, settings)
     raise AssertionError(f"unhandled command {args.command}")
+
+
+def _serve_mcp(settings: Settings) -> int:  # pragma: no cover - loads the real models
+    try:
+        from arxiv_agent.mcp_server import MAX_K, create_server
+    except ModuleNotFoundError as exc:
+        if exc.name != "mcp" and not (exc.name or "").startswith("mcp."):
+            raise
+        print(
+            "the MCP server needs the extra: pip install 'arxiv-research-agent[mcp]'",
+            file=sys.stderr,
+        )
+        return 1
+    from arxiv_agent import runtime
+    from arxiv_agent.retrieval.rerank import CrossEncoderReranker
+    from arxiv_agent.retrieval.retriever import TwoStageRetriever
+
+    if not settings.chroma_dir.exists():
+        print(f"no index at {settings.chroma_dir}; run `arxiv-agent ingest` first", file=sys.stderr)
+        return 1
+    store = runtime.open_store(settings)
+    retriever = TwoStageRetriever(
+        store,
+        CrossEncoderReranker(settings.rerank_model),
+        k_candidates=max(settings.k_candidates, MAX_K),
+        k=MAX_K,
+    )
+    create_server(store, retriever).run("stdio")
+    return 0
 
 
 _QUESTIONS = Path("eval/questions")

@@ -99,6 +99,13 @@ class PaperStore:
         ]
         return sorted(chunks, key=lambda c: c.index)
 
+    def chunk(self, chunk_id: str) -> Chunk | None:
+        """One stored chunk by its id (``{arxiv_id}#{index}``), or None."""
+        got = self._db.get(ids=[chunk_id], include=["documents", "metadatas"])
+        if not got["ids"]:
+            return None
+        return _to_chunk(got["ids"][0], got["documents"][0], got["metadatas"][0])
+
     def dense_search(self, query: str, k: int, arxiv_id: str | None = None) -> list[Hit]:
         results = self._db.similarity_search_with_score(
             query, k=k, filter={"arxiv_id": arxiv_id} if arxiv_id else None

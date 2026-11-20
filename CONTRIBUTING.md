@@ -3,7 +3,7 @@
 ## Setup
 
 ```bash
-uv sync --extra dev --extra eval
+uv sync --extra dev --extra eval --extra mcp
 source .venv/bin/activate
 ```
 

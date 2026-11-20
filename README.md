@@ -16,7 +16,10 @@ On the 30-question test set, with `qwen3:4b-instruct-2507-q4_K_M` as the
 agent and `llama3.1:8b` as the judge, both local. Every number comes from a run
 committed under [eval/runs](eval/runs);
 [docs/evaluation.md](docs/evaluation.md) has the method, the intervals and
-what the numbers do not show, and `arxiv-agent eval dashboard` charts them.
+what the numbers do not show, with a
+[one-screen summary](docs/evaluation.md#method-in-brief) at the top
+(why a local 8B judge and a 4B agent, how the intervals are computed, how
+the 30 questions were made), and `arxiv-agent eval dashboard` charts them.
 
 | Retrieval | MRR@5 | Hit@5 | Recall@5 |
 | --- | --- | --- | --- |
@@ -40,6 +43,45 @@ second with a choice made on the dev set, and the table above is the second
 run. Only the context precision gain is clear of the noise of 30 questions;
 [docs/evaluation.md](docs/evaluation.md#the-test-set-was-run-twice) says
 what a second run on a seen test set is worth.
+
+## Use it from an MCP client
+
+The retrieval is also an [MCP](https://modelcontextprotocol.io) server over
+stdio, so any MCP client can search the library without the agent or a
+language model. It is read-only: no tool writes, fetches the network or runs
+an LLM. It needs the `mcp` extra and an index built by `arxiv-agent ingest`.
+
+```bash
+uv sync --extra mcp
+uv run arxiv-agent mcp          # speaks MCP on stdin/stdout
+```
+
+A client configuration for a generic stdio client (run from the checkout,
+where `data/` lives; `ARXIV_AGENT_*` variables work as in
+[configuration](docs/configuration.md)):
+
+```json
+{
+  "mcpServers": {
+    "arxiv-research-agent": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/arxiv-research-agent", "--extra", "mcp",
+               "arxiv-agent", "mcp"]
+    }
+  }
+}
+```
+
+| Tool | Input | Returns |
+| --- | --- | --- |
+| `search_papers` | `query` (1 to 1000 characters), `k` (1 to 20, default 5) | the top `k` passages of the two-stage retrieval: `chunk_id`, `paper_id`, `version`, `title`, `page`, `score` (cross-encoder logit) and `text` |
+| `get_passage` | `chunk_id` (such as `2210.03629v3#12`, up to 128 characters) | that passage's `text` and its `citation` (`[chunk_id] title, p.N`); an error if it is not in the library |
+| `list_papers` | none | every paper's `paper_id`, `version`, `title` and number of passages |
+
+Results are structured content (a `result` list) plus its JSON text. The
+server uses the official `mcp` Python SDK 2.3 and serves protocol revision
+2026-07-28 to clients that speak it and 2025-11-25 (and earlier handshake
+revisions) to the rest; both are covered by the tests.
 
 ## How it works
 
@@ -90,7 +132,7 @@ curl -N -X POST http://127.0.0.1:8000/query \
 ## Development
 
 ```bash
-uv sync --extra dev --extra eval
+uv sync --extra dev --extra eval --extra mcp
 bash scripts/preflight.sh
 ```
 

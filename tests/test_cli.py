@@ -34,7 +34,7 @@ def test_help_lists_the_commands(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit):
         main(["--help"])
     out = capsys.readouterr().out
-    for command in ("ingest", "ask", "papers", "serve"):
+    for command in ("ingest", "ask", "papers", "serve", "mcp"):
         assert command in out
 
 

@@ -81,3 +81,9 @@ def test_store_persists_across_instances(tmp_path: Path) -> None:
 def test_collection_name_encodes_model_and_chunking() -> None:
     name = collection_name("sentence-transformers/all-MiniLM-L6-v2", 256, 32)
     assert name == "papers-all-minilm-l6-v2-256-32"
+
+
+def test_chunk_by_id_round_trips_and_misses_cleanly(store: PaperStore) -> None:
+    seed(store)
+    assert store.chunk("1111.11111v1#1") == chunk("1111.11111v1", 1, "delta epsilon", title="First")
+    assert store.chunk("1111.11111v1#9") is None

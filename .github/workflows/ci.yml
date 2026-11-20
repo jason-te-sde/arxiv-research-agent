@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --locked --extra dev --extra eval --python 3.11
+      - run: uv sync --locked --extra dev --extra eval --extra mcp --python 3.11
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy
@@ -43,7 +43,7 @@ jobs:
         with:
           path: ~/.cache/huggingface
           key: hf-${{ runner.os }}-minilm-l6-ms-marco-v1
-      - run: uv sync --locked --extra dev --extra eval --python ${{ matrix.python }}
+      - run: uv sync --locked --extra dev --extra eval --extra mcp --python ${{ matrix.python }}
       # Includes the `slow` tests: they load the real embedder and cross-encoder.
       - run: uv run pytest -q --cov --cov-report=term-missing:skip-covered
 

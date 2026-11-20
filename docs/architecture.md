@@ -23,8 +23,9 @@
 | `agent/` | the ReAct loop and its fallback (`loop`), the four tools (`tools`), prompts, citation extraction and verification (`citations`), conversation memory and sessions (`memory`), run events (`events`), model construction (`models`) |
 | `api/` | FastAPI app with SSE streaming (`app`) |
 | `eval/` | question sets (`dataset`), model-free relevance (`relevance`), retrieval metrics, answer runs, RAGAS judging, run metadata, the dashboard |
+| `mcp_server.py` | read-only MCP server over the store and the two-stage retriever (optional `mcp` extra) |
 | `runtime.py` | wires settings into a store, retriever, agent and ingestor |
-| `cli.py` | `arxiv-agent ingest / ask / papers / serve / eval` |
+| `cli.py` | `arxiv-agent ingest / ask / papers / serve / mcp / eval` |
 
 ## One question, step by step
 
