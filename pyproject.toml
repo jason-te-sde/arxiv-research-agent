@@ -32,6 +32,7 @@ dependencies = [
 [project.optional-dependencies]
 # ragas 0.4.3 imports langchain_community.chat_models.vertexai, which
 # langchain-community 0.4.2 removed; the exact pin keeps `import ragas` working.
+mcp = ["mcp>=2.3,<3"]
 eval = ["ragas==0.4.3", "langchain-community==0.4.1"]
 dev = [
   "pytest>=8.2",

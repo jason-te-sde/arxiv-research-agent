@@ -5,6 +5,43 @@ produced by the commands below on a clean checkout of the commit the run
 records. This page says how they are produced, what they mean, and what they
 do not cover.
 
+## Method in brief
+
+- **Test set.** 30 questions, with a 10-question dev set for every choice
+  that has a knob. Both were drafted from the extracted text of 24 of the
+  65 papers, split by a seeded random draw stratified by kind; the test set
+  was committed on its own before any measurement ran on it. Each question
+  carries verbatim evidence quotes that `arxiv-agent eval check-dataset`
+  verifies against the papers and the index
+  ([details](#question-sets)).
+- **Why the judge is a local 8B model.** No Claude API key was available
+  for measurement, and a local judge lets anyone with a 16 GB machine
+  reproduce every number without a key. It is `llama3.1:8b`, a different
+  model family from the agent, so it is not grading its own writing; it
+  decodes greedily with a fixed seed. The price is a noisier judge than a
+  frontier model, with no human grading to calibrate it, so every mean is
+  reported with its count of unscored questions
+  ([ADR 5](adr/0005-local-models-for-measurement.md)).
+- **Why the agent is a 4B model.** The agent was `qwen3:8b` until
+  measurement showed it holding 7.8 GB on a 16 GB machine; the owner chose
+  the 4B model and accepted different numbers. The build is the instruct one
+  because the bare `qwen3:4b` tag always thinks, which put its reasoning
+  into every answer ([known defects](#known-defects)). Numbers for a
+  larger model or for Claude would differ and are not claimed.
+- **How the 95% intervals are computed.** A percentile bootstrap over
+  questions (`src/arxiv_agent/eval/stats.py`): resample the per-question
+  values with replacement 10,000 times, seed 0, take the 2.5th and 97.5th
+  percentiles of the resampled means. For a difference between two systems
+  (reranked minus dense, second run minus first) the interval is over the
+  per-question differences, so each question stays paired with itself.
+  Questions the judge could not score are left out, not counted as zero.
+- **What the numbers do not show.** With 30 questions a difference of a
+  few points is not a finding; the questions were written with the source
+  passage in view; the reported test run follows fixes made after reading
+  the first run's answers; the judge is small and lenient on context in at
+  least two cases; and latency describes one laptop
+  ([the full list](#what-these-numbers-do-not-show)).
+
 ## Setup the numbers depend on
 
 | | |

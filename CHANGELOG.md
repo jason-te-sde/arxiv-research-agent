@@ -9,5 +9,7 @@
   three-call budget with a direct-retrieval fallback, verified citations and
   conversation memory.
 - FastAPI service with SSE streaming; `arxiv-agent` CLI.
+- `arxiv-agent mcp`: a read-only MCP server (stdio; `search_papers`,
+  `get_passage`, `list_papers`) behind the optional `mcp` extra.
 - Evaluation: model-free retrieval metrics from evidence quotes, RAGAS
   answer metrics with a local judge, run metadata and an HTML dashboard.
