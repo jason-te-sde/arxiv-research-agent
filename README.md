@@ -35,14 +35,12 @@ Reranking adds 0.164 MRR@5, with a 95% interval of +0.039 to +0.297.
 All 30 questions were answered within the agent's three calls, at a median
 of 33 s each on an M2 laptop.
 
-**The test set was run twice.** The first run (0.804, 0.768, 0.746, 0.662)
-showed two defects in the agent: the `qwen3:4b` tag is a build that always
-thinks, so the model's reasoning came out as part of every answer, and on
-11 questions the agent searched only the wrong paper. Both were fixed, the
-second with a choice made on the dev set, and the table above is the second
-run. Only the context precision gain is clear of the noise of 30 questions;
-[docs/evaluation.md](docs/evaluation.md#the-test-set-was-run-twice) says
-what a second run on a seen test set is worth.
+**The evaluation found two defects, and both were fixed.** The first run of
+the test set (0.804, 0.768, 0.746, 0.662) showed that the `qwen3:4b` tag is a
+build that always thinks, so the model's reasoning came out as part of every
+answer, and that on 11 questions the agent searched only the wrong paper. The
+second fix was chosen on the dev set, and the table above is the second run
+([how both runs compare](docs/evaluation.md#the-test-set-was-run-twice)).
 
 ## Use it from an MCP client
 
